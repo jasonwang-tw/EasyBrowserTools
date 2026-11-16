@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="connect-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>截圖編輯 · Easy Browser Tools</title>
+  <link rel="stylesheet" href="ocr.css">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="../icons/easy-browser-tools-yellow-48.png" width="28" height="28" alt="">
+      <div class="brand"><h1>截圖編輯 <span id="version"></span></h1><p>截圖後自動辨識與複製，可使用標註工具 · 全程本機處理</p></div>
+      <button id="shortcuts" title="在瀏覽器設定自訂截圖快捷鍵">設定快捷鍵</button>
+    </header>
+    <div class="toolbar" role="toolbar" aria-label="截圖標註工具">
+      <div class="tools" role="group" aria-label="標註工具">
+        <button data-tool="pen" aria-pressed="true" title="畫筆"><svg viewBox="0 0 24 24"><path d="m16 3 5 5L8 21H3v-5Z"/></svg>畫筆</button>
+        <button data-tool="rect" aria-pressed="false" title="矩形"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/></svg>矩形</button>
+        <button data-tool="arrow" aria-pressed="false" title="箭頭"><svg viewBox="0 0 24 24"><path d="M5 19 19 5M5 5h14v14"/></svg>箭頭</button>
+        <button data-tool="highlight" aria-pressed="false" title="螢光筆"><svg viewBox="0 0 24 24"><path d="m9 11 8-8 4 4-8 8M7 13l4 4-3 3H4v-4ZM3 22h7"/></svg>螢光筆</button>
+        <button data-tool="text" aria-pressed="false" title="文字"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M12 4v16M8 20h8"/></svg>文字</button>
+        <button data-tool="number" aria-pressed="false" title="點擊圖片依序新增編號，拖曳編號可移動"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8h2v8m-2 0h4"/></svg>編號 <span id="next-number" aria-hidden="true">1</span></button>
+      </div>
+      <label>顏色 <input id="color" type="color" value="#ef4444"></label>
+      <label>線寬 <select id="width"><option value="2">細</option><option value="3" selected>中</option><option value="6">粗</option></select></label>
+      <label id="text-size-label" hidden>字級 <select id="text-size"><option value="16">16</option><option value="24" selected>24</option><option value="32">32</option><option value="48">48</option></select></label>
+      <button id="undo" disabled title="Ctrl+Z">復原</button>
+      <button id="redo" disabled title="Ctrl+Shift+Z">重做</button>
+      <button id="delete-selected" disabled title="Delete／Backspace"><svg viewBox="0 0 24 24"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6m4-6v6"/></svg>刪除選取</button>
+      <button id="copy-image" disabled>複製圖片</button>
+      <button id="save-image" disabled>下載 PNG</button>
+    </div>
+    <p id="status" role="status" aria-live="polite">載入截圖中…</p>
+    <progress id="progress" max="1" value="0" hidden aria-label="辨識進度"></progress>
+    <section class="workspace">
+      <div class="card image-card">
+        <div class="card-heading"><h2>截圖與標註</h2><span id="dimensions"></span></div>
+        <p>文字與編號可點選、拖曳。選取後按 Delete／Backspace 或「刪除選取」移除；Esc 取消選取。</p>
+        <div id="preview" hidden><canvas id="screenshot" role="img" aria-label="可繪製標註的截圖" tabindex="0"></canvas></div>
+      </div>
+      <div class="card result">
+        <h2>文字辨識</h2>
+        <div class="ocr-options">
+          <label for="language">辨識語言</label>
+          <select id="language"><option value="chi_tra+eng">繁體中文＋英文</option><option value="chi_sim+eng">簡體中文＋英文</option><option value="eng">英文</option></select>
+          <label><input id="upscale" type="checkbox"> 放大 2 倍（小字）</label>
+          <label title="改善斜體中文誤辨；關閉後使用原始辨識結果"><input id="cjk-recovery" type="checkbox" checked> 斜體中文校正</label>
+          <label>版面 <select id="layout"><option value="auto">自動分區</option><option value="columns">雙欄圖文（左→右）</option><option value="document">整齊段落</option><option value="scattered">海報／分散文字</option></select></label>
+          <label>底色 <select id="background"><option value="auto">自動判斷</option><option value="original">保留原圖</option><option value="dark">深色底／淺色字</option></select></label>
+        </div>
+        <div class="ocr-actions"><button id="copy" disabled>複製文字</button></div>
+        <label class="sr-only" for="text">可編輯的 OCR 辨識結果</label>
+        <textarea id="text" placeholder="截圖載入後自動辨識，完成後自動複製，可直接貼上。" spellcheck="false"></textarea>
+        <p id="quality-note" role="status" hidden>本次辨識可信度偏低，複製後請核對；可切換版面、底色或縮小截圖範圍再試。</p>
+        <p>截圖或圖片右鍵擷取後自動辨識，調整上方選項會自動重新辨識並更新結果。OCR 使用原始截圖，不包含標註；結果可編輯後再複製。</p>
+        <p>自動分區會辨識有明顯中縫的雙欄，依左欄再右欄讀取，並強化淺底彩色文字。需要時可手動選「雙欄圖文」；原圖與匯出不受影響。</p>
+        <p>海報與多區塊圖片可切換「海報／分散文字」。浮層遮住或互相重疊的字無法還原，請先關閉提示框再截圖；純英文圖片建議選「英文」。</p>
+      </div>
+    </section>
+  </main>
+  <script src="../vendor/ocr/tesseract.min.js"></script>
+  <script type="module" src="ocr.js"></script>
+</body>
+</html>

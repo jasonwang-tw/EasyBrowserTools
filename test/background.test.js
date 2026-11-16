@@ -5,24 +5,44 @@ const listeners = {};
 const injections = [];
 const messages = [];
 const menus = [];
+const captures = [];
+const created = [];
+let session = {};
+let selectionResult = true;
+let activeTab = { id: 3, windowId: 1, url: 'https://example.com/' };
 const event = name => ({ addListener: listener => { listeners[name] = listener; } });
 globalThis.chrome = {
-  runtime: { id: 'test-extension', onInstalled: event('installed'), onMessage: event('message') },
+  runtime: { id: 'test-extension', getURL: path => `chrome-extension://test-extension/${path}`, onInstalled: event('installed'), onMessage: event('message') },
   contextMenus: {
     onClicked: event('context'),
     removeAll: done => { menus.length = 0; done(); },
     create: menu => menus.push(menu)
   },
   action: { onClicked: event('action') },
-  scripting: { executeScript: async data => injections.push(data) },
-  tabs: { sendMessage: async (...args) => messages.push(args) }
+  commands: { onCommand: event('command') },
+  windows: { create: async data => { created.push(data); } },
+  scripting: { executeScript: async data => { injections.push(data); return [{ result: selectionResult }]; } },
+  storage: { session: {
+    get: async () => session,
+    set: async data => { Object.assign(session, data); },
+    remove: async keys => { for (const key of [keys].flat()) delete session[key]; }
+  } },
+  tabs: {
+    sendMessage: async (...args) => { messages.push(args); return null; },
+    query: async () => [activeTab],
+    captureVisibleTab: async (...args) => { captures.push(args); return 'data:image/png;base64,AAAA'; },
+    create: async () => { assert.fail('截圖不應新增一般頁籤'); }
+  }
 };
 await import('../background.js');
-afterEach(() => { mock.restoreAll(); injections.length = 0; messages.length = 0; });
+afterEach(() => {
+  mock.restoreAll(); injections.length = 0; messages.length = 0; captures.length = 0; created.length = 0;
+  session = {}; selectionResult = true; activeTab = { id: 3, windowId: 1, url: 'https://example.com/' };
+});
 
-test('安裝時只註冊翻譯選單', () => {
+test('安裝時註冊翻譯、截圖與圖片 OCR 選單', () => {
   listeners.installed();
-  assert.equal(menus.length, 1);
+  assert.equal(menus.length, 4);
   assert.equal(menus[0].id, 'instant-translate');
   assert.deepEqual(menus[0].contexts, ['selection']);
 });
@@ -33,10 +53,93 @@ test('右鍵入口保留點選的 frame，先注入再送出文字', async () =>
   assert.deepEqual(messages[0], [12, { type: 'TRANSLATE_SELECTION', data: { text: 'Hello' } }, { frameId: 7 }]);
 });
 
-test('工具列入口請內容腳本使用目前選取文字', async () => {
+test('工具列有選取文字時維持翻譯入口', async () => {
   await listeners.action({ id: 3 });
   assert.equal(messages[0][1].type, 'TRANSLATE_SELECTION');
   assert.equal(messages[0][1].data.text, undefined);
+});
+
+test('工具列無選取文字時先在網頁框選，不新增頁籤或彈窗', async () => {
+  selectionResult = false;
+  await listeners.action(activeTab);
+  assert.deepEqual(captures, [[1, { format: 'png' }]]);
+  assert.equal(created.length, 0);
+  assert.equal(messages.at(-1)[1].type, 'REGION_CAPTURE_START');
+  const [job] = Object.values(session);
+  assert.equal(job.dataUrl, 'data:image/png;base64,AAAA');
+  assert.equal(typeof job.captureId, 'string');
+});
+
+test('圖片右鍵保留可見範圍，不取得或下載原圖 URL', async () => {
+  const target = { rect: { x: 10, y: 20, width: 100, height: 50 }, viewport: { width: 800, height: 600 } };
+  mock.method(chrome.tabs, 'sendMessage', async (...args) => { messages.push(args); return target; });
+  await listeners.context({ menuItemId: 'image-ocr', frameId: 0, srcUrl: 'https://private.example/image' }, activeTab);
+  assert.deepEqual(messages[0], [3, { type: 'OCR_IMAGE_RECT', srcUrl: 'https://private.example/image' }, { frameId: 0 }]);
+  assert.deepEqual(Object.values(session)[0].target, target);
+  assert.equal(created[0].type, 'popup');
+  assert.ok(messages.every(message => message[1].type !== 'REGION_CAPTURE_START'));
+  assert.ok(!JSON.stringify(session).includes('private.example'));
+});
+
+test('iframe 圖片向原 frame 取得已換算的頂層範圍，直接開啟編輯器', async () => {
+  const target = { rect: { x: 110, y: 120, width: 100, height: 50 }, viewport: { width: 800, height: 600 } };
+  mock.method(chrome.tabs, 'sendMessage', async (...args) => { messages.push(args); return args[1].type === 'OCR_IMAGE_RECT' ? target : null; });
+  await listeners.context({ menuItemId: 'image-ocr', frameId: 7, srcUrl: 'https://frame.example/image.png' }, activeTab);
+  assert.equal(messages[0][2].frameId, 7);
+  assert.deepEqual(Object.values(session)[0].target, target);
+  assert.equal(created[0].type, 'popup');
+  assert.ok(messages.every(message => message[1].type !== 'REGION_CAPTURE_START'));
+});
+
+test('舊分頁沒有圖片監聽器時重新注入並重試，成功後不要求框選', async () => {
+  const target = { rect: { x: 20, y: 30, width: 100, height: 50 }, viewport: { width: 800, height: 600 } };
+  let requests = 0;
+  mock.method(chrome.tabs, 'sendMessage', async (...args) => {
+    messages.push(args);
+    if (args[1].type !== 'OCR_IMAGE_RECT') return null;
+    if (++requests === 1) throw Error('Receiving end does not exist');
+    return target;
+  });
+  await listeners.context({ menuItemId: 'image-ocr', srcUrl: 'https://example.com/image.png' }, activeTab);
+  assert.equal(requests, 2);
+  assert.ok(injections.some(injection => injection.files?.includes('content/ocr-target.js') && injection.target.allFrames));
+  assert.deepEqual(Object.values(session)[0].target, target);
+  assert.ok(messages.every(message => message[1].type !== 'REGION_CAPTURE_START'));
+});
+
+test('無法定位圖片或範圍無效時顯示原因，不擷取整頁或偷偷改成框選', async () => {
+  for (const target of [null, { error: '畫面有多張相同圖片，請重新右鍵點選' }, { rect: { x: NaN }, viewport: { width: 800, height: 600 } }]) {
+    mock.method(chrome.tabs, 'sendMessage', async (...args) => { messages.push(args); return args[1].type === 'OCR_IMAGE_RECT' ? target : null; });
+    await listeners.context({ menuItemId: 'image-ocr', frameId: 0 }, activeTab);
+    assert.ok(created.at(-1).url.includes('?error='));
+    assert.equal(captures.length, 0);
+    assert.ok(messages.every(message => message[1].type !== 'REGION_CAPTURE_START'));
+    assert.deepEqual(session, {});
+    mock.restoreAll();
+  }
+});
+
+test('分頁切換時拒絕截取另一頁並顯示錯誤', async () => {
+  activeTab = { ...activeTab, id: 99 };
+  await listeners.context({ menuItemId: 'screenshot-ocr' }, { id: 3, windowId: 1 });
+  assert.equal(captures.length, 0);
+  assert.match(decodeURIComponent(created[0].url), /請回到原分頁/);
+});
+
+test('截圖失敗顯示錯誤；不保存失敗影像', async () => {
+  mock.method(chrome.tabs, 'captureVisibleTab', async () => { throw new Error('沒有截圖權限'); });
+  await listeners.context({ menuItemId: 'screenshot-ocr' }, activeTab);
+  assert.match(decodeURIComponent(created[0].url), /沒有截圖權限/);
+  assert.deepEqual(session, {});
+});
+
+test('新工作清除過期影像，開彈窗失敗則移除本次影像', async () => {
+  session = { 'ocr:old': { createdAt: 1 } };
+  mock.method(chrome.tabs, 'sendMessage', async () => ({ rect: { x: 0, y: 0, width: 100, height: 50 }, viewport: { width: 800, height: 600 } }));
+  mock.method(chrome.windows, 'create', async data => { if (data.url.includes('#')) throw new Error('開頁失敗'); created.push(data); });
+  await listeners.context({ menuItemId: 'image-ocr', frameId: 0 }, activeTab);
+  assert.deepEqual(session, {});
+  assert.match(decodeURIComponent(created[0].url), /開頁失敗/);
 });
 
 test('不處理未知訊息或其他擴充功能訊息', () => {
@@ -45,11 +148,56 @@ test('不處理未知訊息或其他擴充功能訊息', () => {
   assert.equal(listeners.message({ type: 'TRANSLATE_WORD' }, { id: 'other-extension' }, fail), false);
 });
 
-function send(message) {
+function send(message, sender = { id: chrome.runtime.id }) {
   return new Promise(resolve => {
-    assert.equal(listeners.message(message, { id: chrome.runtime.id }, resolve), true);
+    assert.equal(listeners.message(message, sender, resolve), true);
   });
 }
+
+test('快捷鍵即使有選取文字仍啟動框選截圖', async () => {
+  await listeners.command('capture-region', activeTab);
+  assert.equal(captures.length, 1);
+  assert.equal(messages.at(-1)[1].type, 'REGION_CAPTURE_START');
+  assert.equal(created.length, 0);
+});
+
+test('框選完成才建立 popup，保留裁切座標且消耗待選工作', async () => {
+  await listeners.context({ menuItemId: 'screenshot-ocr' }, activeTab);
+  const captureId = session['region:3'].captureId;
+  const rect = { x: 10, y: 20, width: 200, height: 100 };
+  const viewport = { width: 800, height: 600 };
+  const response = await send({ type: 'REGION_CAPTURE_COMPLETE', captureId, rect, viewport }, { id: chrome.runtime.id, tab: activeTab, frameId: 0 });
+  assert.equal(response.success, true);
+  assert.equal(session['region:3'], undefined);
+  assert.equal(created[0].type, 'popup');
+  assert.match(created[0].url, /ocr\/ocr\.html#/);
+  assert.deepEqual(Object.values(session)[0].target, { rect, viewport });
+});
+
+test('取消框選移除暫存，不建立任何視窗', async () => {
+  await listeners.command('capture-region', activeTab);
+  const captureId = session['region:3'].captureId;
+  assert.equal((await send({ type: 'REGION_CAPTURE_CANCEL', captureId }, { id: chrome.runtime.id, tab: activeTab, frameId: 0 })).success, true);
+  assert.deepEqual(session, {});
+  assert.equal(created.length, 0);
+});
+
+test('拒絕不同分頁、frame、過期識別及無效框選座標', async () => {
+  await listeners.command('capture-region', activeTab);
+  const captureId = session['region:3'].captureId;
+  const message = { type: 'REGION_CAPTURE_COMPLETE', captureId, rect: { x: 0, y: 0, width: 100, height: 100 }, viewport: { width: 800, height: 600 } };
+  for (const sender of [
+    { id: chrome.runtime.id, tab: { id: 4 }, frameId: 0 },
+    { id: chrome.runtime.id, tab: activeTab, frameId: 7 }
+  ]) assert.equal((await send(message, sender)).success, false);
+  const sender = { id: chrome.runtime.id, tab: activeTab, frameId: 0 };
+  assert.equal((await send({ ...message, captureId: 'other' }, sender)).success, false);
+  assert.equal((await send({ ...message, rect: { ...message.rect, x: NaN } }, sender)).success, false);
+  session['region:3'].createdAt = 1;
+  assert.equal((await send(message, sender)).success, false);
+  assert.deepEqual(session, {});
+  assert.equal(created.length, 0);
+});
 
 test('翻譯非同步回覆可直接交給浮窗顯示', async () => {
   mock.method(globalThis, 'fetch', async () => Response.json([[['你好']]]));
