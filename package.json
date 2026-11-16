@@ -1,0 +1,11 @@
+{
+  "name": "easy-browser-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Easy Browser Tools — 獨立選取翻譯瀏覽器擴充功能",
+  "scripts": {
+    "test": "node --test",
+    "check": "node scripts/check.mjs"
+  }
+}
