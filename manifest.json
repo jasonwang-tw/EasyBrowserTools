@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Easy Browser Tools",
-  "version": "1.0.0",
-  "description": "選取網頁文字即可翻譯，支援原文與譯文複製、朗讀及右鍵翻譯。",
+  "version": "1.2.10",
+  "description": "選取翻譯、自訂快捷鍵框選截圖，彈窗標註、圖片複製與本機 OCR。",
   "permissions": [
     "activeTab",
+    "clipboardWrite",
     "contextMenus",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "host_permissions": [
     "https://translate.google.com/*"
@@ -16,17 +18,19 @@
     "type": "module"
   },
   "action": {
-    "default_title": "翻譯目前選取的文字",
+    "default_title": "選取文字翻譯；未選取時框選截圖",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "icons/easy-browser-tools-yellow-16.png",
+      "32": "icons/easy-browser-tools-yellow-32.png",
+      "48": "icons/easy-browser-tools-yellow-48.png",
+      "128": "icons/easy-browser-tools-yellow-128.png"
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icons/easy-browser-tools-yellow-16.png",
+    "32": "icons/easy-browser-tools-yellow-32.png",
+    "48": "icons/easy-browser-tools-yellow-48.png",
+    "128": "icons/easy-browser-tools-yellow-128.png"
   },
   "content_scripts": [
     {
@@ -38,6 +42,24 @@
         "content/translate-popup.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content/ocr-target.js"],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_start"
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://translate.google.com"
+  },
+  "commands": {
+    "capture-region": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "框選截圖並開啟標註／OCR 彈窗"
+    }
+  }
 }

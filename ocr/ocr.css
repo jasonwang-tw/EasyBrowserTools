@@ -1,0 +1,54 @@
+:root { color-scheme: light dark; font: 14px/1.5 system-ui, sans-serif; color: #243247; background: #f4f6fa; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1700px; margin: auto; padding: 22px; }
+header, .toolbar, .tools, .card-heading, .ocr-actions { display: flex; align-items: center; gap: 8px; }
+header { color: #245cc5; margin-bottom: 20px; gap: 12px; }
+.brand { flex: 1; }
+h1 { font-size: 22px; margin: 0; }
+#version { font-size: 12px; font-weight: 400; white-space: nowrap; }
+h2 { font-size: 16px; margin: 0; }
+p { color: #596779; margin: 6px 0 12px; }
+header p, .card p, #dimensions { font-size: 12px; }
+header p { margin: 0; }
+button, select, input[type=text] { font: inherit; padding: 7px 10px; border: 1px solid #bcc9dc; background: #fff; border-radius: 7px; color: inherit; }
+button { cursor: pointer; display: inline-flex; gap: 5px; align-items: center; justify-content: center; white-space: nowrap; }
+button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+button:hover:enabled, button[aria-pressed=true] { background: #eaf1ff; border-color: #245cc5; color: #245cc5; }
+button.primary { background: #245cc5; color: white; border-color: #245cc5; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #6a9aff; outline-offset: 2px; }
+.toolbar { flex-wrap: wrap; padding: 10px; border-radius: 10px; background: #e8edf6; }
+.tools { flex-wrap: wrap; }
+label { display: inline-flex; align-items: center; gap: 6px; }
+input[type=color] { width: 30px; height: 28px; padding: 1px; border: 1px solid #bcc9dc; background: transparent; border-radius: 5px; }
+#next-number { border-radius: 4px; padding: 0 5px; font-size: 11px; background: #245cc51a; }
+#status { min-height: 21px; margin-top: 16px; }
+#status.error { color: #b42318; }
+#quality-note { color: #8a4b08; }
+progress { width: 100%; height: 7px; margin-bottom: 12px; accent-color: #245cc5; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; }
+.card { background: #fff; border: 1px solid #dbe2ed; border-radius: 12px; padding: 16px; min-width: 0; }
+.card-heading { justify-content: space-between; }
+#dimensions { color: #596779; }
+#preview { position: relative; width: 100%; background: repeating-conic-gradient(#e4e8ee 0 25%, #f6f8fb 0 50%) 0 0/16px 16px; border: 1px solid #dbe2ed; border-radius: 5px; }
+#screenshot { display: block; width: 100%; height: auto; cursor: crosshair; touch-action: none; }
+.ocr-options { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.ocr-actions { flex-wrap: wrap; margin-bottom: 14px; }
+textarea { resize: vertical; width: 100%; min-height: 320px; padding: 12px; font: 15px/1.75 system-ui, sans-serif; border: 1px solid #bcc9dc; border-radius: 7px; color: inherit; background: transparent; }
+.canvas-text-editor { position: absolute; z-index: 2; padding: 6px; border: 1px solid #6a9aff; border-radius: 7px; background: #fff; box-shadow: 0 5px 20px #11182733; }
+.canvas-text-editor textarea { display: block; width: 100%; height: 72px; min-height: 48px; padding: 4px; line-height: 1.3; resize: vertical; font-family: system-ui, sans-serif; }
+.canvas-text-editor > div { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.canvas-text-editor button { font-size: 12px; padding: 4px 8px; }
+.annotation-selection { position: absolute; border: 2px dashed #2563eb; border-radius: 4px; pointer-events: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+[hidden] { display: none !important; }
+@media (max-width: 800px) { main { padding: 14px; } .workspace { grid-template-columns: 1fr; } textarea { min-height: 200px; } header { align-items: flex-start; } }
+@media (prefers-color-scheme: dark) {
+  :root { color: #e3eaf7; background: #111827; } header { color: #8bb3ff; } p, #dimensions { color: #aebbd0; }
+  .card, button, select, input[type=text] { background: #1c273b; border-color: #42516b; }
+  .toolbar { background: #19243a; } button:hover:enabled, button[aria-pressed=true] { background: #2a3c5d; color: #a9c9ff; border-color: #8bb3ff; }
+  textarea, #preview { border-color: #42516b; } #status.error { color: #ffb4a8; }
+  #quality-note { color: #f6c56f; }
+  .canvas-text-editor { background: #1c273b; }
+}
