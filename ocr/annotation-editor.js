@@ -1,4 +1,7 @@
 // Non-destructive annotations; OCR always receives the clean cropped source.
+import { brushCursor, strokeWidth } from './brush-cursor.js';
+import { snappedLineEnd } from './line-geometry.js';
+import { clipCropMask } from './crop-geometry.js';
 export function drawAnnotation(context, item) {
   context.save();
   context.strokeStyle = item.color;
@@ -21,6 +24,11 @@ export function drawAnnotation(context, item) {
     context.fillText(String(item.number), item.start.x, item.start.y, item.radius * 1.6);
   } else if (item.tool === 'rect') {
     context.strokeRect(item.start.x, item.start.y, item.end.x - item.start.x, item.end.y - item.start.y);
+  } else if (item.tool === 'line') {
+    context.beginPath();
+    context.moveTo(item.start.x, item.start.y);
+    context.lineTo(item.end.x, item.end.y);
+    context.stroke();
   } else if (item.tool === 'arrow') {
     const angle = Math.atan2(item.end.y - item.start.y, item.end.x - item.start.x);
     const length = Math.max(item.width * 4, item.headSize);
@@ -43,9 +51,11 @@ export function drawAnnotation(context, item) {
 }
 
 export class AnnotationEditor {
-  constructor(canvas, source, onChange) {
+  constructor(canvas, source, onChange, documentHistory = null) {
     this.canvas = canvas;
     this.source = source;
+    this.documentHistory = documentHistory;
+    this.cropMasks = [];
     this.onChange = onChange;
     this.items = [];
     this.undoStack = [];
@@ -57,28 +67,32 @@ export class AnnotationEditor {
     this.tool = 'pen';
     this.color = '#ef4444';
     this.width = 3;
+    this.highlightWidth = 20;
     this.fontSize = 24;
     this.disabled = false;
     canvas.width = source.width;
     canvas.height = source.height;
-    canvas.addEventListener('pointerdown', event => this.begin(event));
-    canvas.addEventListener('pointermove', event => this.move(event));
-    canvas.addEventListener('pointerup', event => this.end(event));
-    canvas.addEventListener('pointercancel', () => this.cancel());
+    this.pointerEvents = { pointerdown: event => this.begin(event), pointermove: event => this.move(event), pointerup: event => this.end(event), pointercancel: () => this.cancel() };
+    for (const [name, listener] of Object.entries(this.pointerEvents)) canvas.addEventListener(name, listener);
     if (canvas.ownerDocument) {
       this.selectionBox = canvas.ownerDocument.createElement('div');
       this.selectionBox.className = 'annotation-selection';
       this.selectionBox.hidden = true;
       this.selectionBox.setAttribute('aria-hidden', 'true');
       canvas.parentElement.append(this.selectionBox);
+      this.brushCursor = brushCursor(canvas, () => ({ tool: this.tool, width: this.width, highlightWidth: this.highlightWidth, disabled: this.disabled, nativeWidth: this.draft?.tool === this.tool ? this.draft.width : undefined }));
     }
     if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => { this.positionTextEditor(); this.positionSelection(); });
+      this.resizeObserver = new ResizeObserver(() => { this.positionTextEditor(); this.positionSelection(); this.brushCursor?.refresh(); });
       this.resizeObserver.observe(canvas);
     }
     this.render();
   }
   get nextNumber() { return Math.max(0, ...this.items.filter(item => item.tool === 'number').map(item => item.number)) + 1; }
+  refreshCursor() {
+    this.canvas.style.cursor = this.disabled ? 'default' : this.tool === 'text' ? 'text' : 'crosshair';
+    this.brushCursor?.refresh();
+  }
   scale() { return this.canvas.width / this.canvas.getBoundingClientRect().width; }
   point(event) {
     const box = this.canvas.getBoundingClientRect();
@@ -138,7 +152,7 @@ export class AnnotationEditor {
     }
     this.pointerId = event.pointerId;
     this.canvas.setPointerCapture(event.pointerId);
-    this.draft = { tool: this.tool, color: this.color, width: (this.tool === 'highlight' ? 20 : this.width) * scale,
+    this.draft = { tool: this.tool, color: this.color, width: strokeWidth(this.tool, this.width, this.highlightWidth) * scale,
       start, end: start, points: [start], headSize: 14 * scale };
     this.render();
   }
@@ -162,8 +176,9 @@ export class AnnotationEditor {
       this.canvas.style.cursor = ['text', 'number'].includes(this.tool) && this.hit(this.point(event)) >= 0 ? 'move' : (this.tool === 'text' ? 'text' : 'crosshair');
       return;
     }
-    this.draft.end = this.point(event);
-    if (this.draft.points.length < 5000) this.draft.points.push(this.draft.end);
+    const point = this.point(event);
+    this.draft.end = this.draft.tool === 'line' ? snappedLineEnd(this.draft.start, point, this.canvas.width, this.canvas.height) : point;
+    if (this.draft.tool !== 'line' && this.draft.points.length < 5000) this.draft.points.push(this.draft.end);
     this.render();
   }
   end(event) {
@@ -181,10 +196,14 @@ export class AnnotationEditor {
     this.canvas.releasePointerCapture(event.pointerId);
     const item = this.draft;
     this.draft = null;
+    if (item.tool === 'line' && Math.hypot(item.end.x - item.start.x, item.end.y - item.start.y) < this.scale()) { this.render(); return; }
     this.commit(item);
   }
-  record(items) {
-    this.undoStack.push(this.items);
+  historySnapshot() { return {items:this.items,document:this.documentHistory?.capture()}; }
+  record(items, documentState) {
+    const previous=this.historySnapshot();
+    if(documentState!==undefined)this.documentHistory?.restore(documentState);
+    this.undoStack.push(previous);
     if (this.undoStack.length > 200) this.undoStack.shift();
     this.items = items;
     if (!items.includes(this.selectedItem)) this.selectedItem = null;
@@ -226,17 +245,21 @@ export class AnnotationEditor {
   editText(item, index = -1) {
     const doc = this.canvas.ownerDocument;
     const panel = doc.createElement('div');
-    panel.className = 'canvas-text-editor';
+    panel.className = 'canvas-text-editor card card-border';
     panel.setAttribute('role', 'group');
     panel.setAttribute('aria-label', '圖片上的文字標註');
     const field = doc.createElement('textarea');
+    field.className = 'textarea textarea-sm annotation-textarea';
     field.setAttribute('aria-label', '圖片上的標註文字');
     field.placeholder = '在這裡輸入文字';
     field.maxLength = 500;
     field.value = item.text;
     const actions = doc.createElement('div');
+    actions.className = 'card-actions';
     const done = doc.createElement('button'); done.type = 'button'; done.textContent = '完成文字';
     const cancel = doc.createElement('button'); cancel.type = 'button'; cancel.textContent = '取消文字';
+    done.className = 'btn btn-primary btn-sm';
+    cancel.className = 'btn btn-outline btn-sm';
     actions.append(done, cancel);
     panel.append(field, actions);
     this.textEditing = { item: { ...item }, index, panel, field };
@@ -251,6 +274,10 @@ export class AnnotationEditor {
     done.addEventListener('click', () => this.finishText(true));
     cancel.addEventListener('click', () => this.finishText(false));
     this.canvas.parentElement.append(panel);
+    if (typeof ResizeObserver !== 'undefined') {
+      this.textEditorObserver = new ResizeObserver(() => this.positionTextEditor());
+      this.textEditorObserver.observe(panel);
+    }
     this.positionTextEditor();
     this.render();
     field.focus();
@@ -263,17 +290,21 @@ export class AnnotationEditor {
     const box = this.canvas.getBoundingClientRect();
     const parent = this.canvas.parentElement.getBoundingClientRect();
     const scale = box.width / this.canvas.width;
-    const width = Math.min(300, Math.max(120, box.width - 8));
-    const left = Math.max(0, Math.min(box.width - width, item.start.x * scale));
-    const top = Math.max(0, Math.min(Math.max(0, box.height - 125), item.start.y * scale));
-    Object.assign(panel.style, { left: `${box.left - parent.left + left}px`, top: `${box.top - parent.top + top}px`, width: `${width}px` });
-    field.style.color = item.color;
-    field.style.fontSize = `${Math.max(12, item.fontSize * scale)}px`;
+    const viewport = this.canvas.parentElement.parentElement?.getBoundingClientRect() || box;
+    const width = Math.min(300, Math.max(0, viewport.width - 16));
+    panel.style.width = `${width}px`;
+    field.style.maxHeight = `${Math.max(60, Math.min(200, viewport.height - 80))}px`;
+    const height = panel.getBoundingClientRect().height || 140;
+    const left = Math.max(viewport.left + 8, Math.min(viewport.right - width - 8, box.left + item.start.x * scale));
+    const top = Math.max(viewport.top + 8, Math.min(viewport.bottom - height - 8, box.top + item.start.y * scale));
+    Object.assign(panel.style, { left: `${left - parent.left}px`, top: `${top - parent.top}px` });
   }
   finishText(save) {
     if (!this.textEditing) return;
     const { item, index, panel, field } = this.textEditing;
     this.textEditing = null;
+    this.textEditorObserver?.disconnect();
+    this.textEditorObserver = null;
     panel.remove();
     const text = field.value.trim();
     if (save && index >= 0) {
@@ -292,18 +323,23 @@ export class AnnotationEditor {
   }
   undo() {
     this.finishText(true); this.cancel();
-    if (this.undoStack.length) { this.redoItems.push(this.items); this.items = this.undoStack.pop(); }
+    if (this.undoStack.length) { const previous=this.historySnapshot(),next=this.undoStack.at(-1); this.documentHistory?.restore(next.document); this.undoStack.pop(); this.redoItems.push(previous); this.items = next.items; }
     this.render(); this.onChange();
   }
   redo() {
     this.finishText(true); this.cancel();
-    if (this.redoItems.length) { this.undoStack.push(this.items); this.items = this.redoItems.pop(); }
+    if (this.redoItems.length) { const previous=this.historySnapshot(),next=this.redoItems.at(-1); this.documentHistory?.restore(next.document); this.redoItems.pop(); this.undoStack.push(previous); this.items = next.items; }
     this.render(); this.onChange();
   }
-  destroy() { this.cancel(); this.resizeObserver?.disconnect(); this.selectionBox?.remove(); }
+  destroy() {
+    this.cancel(); this.resizeObserver?.disconnect(); this.selectionBox?.remove(); this.brushCursor?.destroy();
+    for (const [name, listener] of Object.entries(this.pointerEvents)) this.canvas.removeEventListener?.(name, listener);
+  }
   render() {
     const context = this.canvas.getContext('2d');
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    context.save();
+    for(const mask of this.cropMasks)clipCropMask(context,mask);
     context.drawImage(this.source, 0, 0);
     for (let index = 0; index < this.items.length; index++) {
       if (this.textEditing?.index === index) continue;
@@ -311,6 +347,8 @@ export class AnnotationEditor {
     }
     if (this.draft) drawAnnotation(context, this.draft);
     if (this.textEditing?.item.text) drawAnnotation(context, this.textEditing.item);
+    context.restore();
     this.positionSelection();
+    this.brushCursor?.refresh();
   }
 }

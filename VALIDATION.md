@@ -1,5 +1,195 @@
 # 拆分驗證（2026-11-16）
 
+## 1.8.2 Ctrl+V 貼上圖片（2026-11-18）
+
+- 使用者要求在截圖彈窗直接貼上取代圖片；新增 paste 事件，讀取當次 clipboardData 的第一張圖片檔，與檔案選擇共用 `importImage`。解碼與大小驗證完成才替換文件，清除標註／裁切歷史、去背與舊辨識／譯文，自動本機 OCR；不新增 clipboardRead、遠端圖片下載、持久儲存或背景監聽。
+- `npm test` **132 項**、`npm run check`、`git diff --check` 通過。隔離 Headless Edge **18 項瀏覽器檢查通過**：用原生剪貼簿寫入 PNG 後按實際 Ctrl+V，確認 trusted paste／Files 事件、空白編輯器載入、640×360 原尺寸／透明 alpha 與真實 OCR。再對已有裁切與編號的文件貼上 300×200 新圖，舊歷史與編號清除、舊 OCR／譯文清空。
+- 原生純文字貼上不替換畫布，OCR textarea 的文字貼上正常；圖片在文字框、contenteditable 或模型管理 dialog 貼上時不取代編輯文件。損壞 PNG、SVG、超過 30 MB、HTML 圖片網址用合成 ClipboardEvent 驗證拒絕／保留現有畫布；延遲解碼替身驗證處理中不啟動第二次匯入，恢復原生解碼後完成。主流程不是用合成貼上事件代替 Ctrl+V；沒有應用程式例外，既有 Tesseract 參數／解析度診斷仍可見。
+- QA 腳本位於忽略的 `output/crop-evaluation/paste-check.js`。保留既定深淺色與 daisyUI，只增補操作說明；本輪不重跑未修改的模型品質矩陣，未驗證 macOS Cmd+V、日常安裝重新載入或獨立 Chrome。未提交／推送／發布；重新載入並關閉舊編輯視窗後確認 v1.8.2。
+
+## 1.8.1 刪除按鈕警示色（2026-11-18）
+
+- 依使用者截圖與明確指示，僅調整「刪除加強模型」、「刪除去背模型」及工具列「刪除選取」；套用既有 daisyUI `btn-error` 與主題 error 色。模型使用紅色文字／邊框，標註使用紅色 ghost；滑過／按下顯示紅色淡底，停用沿用既有不可操作／透明度。沒有改動模型管理或刪除事件。
+- `npm test` 132 項、`npm run check`、`git diff --check` 通過。隔離 Headless Edge 的 21 項檢查通過：深淺色三個刪除按鈕的語意樣式與文字顏色、兩個模型按鈕邊框／文字對比至少 4.5、hover 淡紅底與停用狀態；實際編號選取、刪除及復原保持正常。模型按鈕採已安裝視覺 fixture，未安裝或刪除任何模型；未重新測試未修改的模型刪除服務。
+- 深色／淺色畫面已目視，證據 `pagekit-delete-buttons-{dark,light}.png` 位於既有 visualizations 目錄；QA 腳本為忽略的 `output/crop-evaluation/delete-button-check.js`。本輪未新增鏡像單元測試，沒有 build／monitor script。日常安裝尚未重新載入，未提交／推送／發布；重新載入並關閉舊編輯視窗後確認 v1.8.1。
+
+## 1.8.0 樣式子選單與本機裁切（2026-11-18）
+
+- 依使用者確認的兩組五項問答，沿用 daisyUI 5.8.1、暖黃及深淺色。顏色／粗細／字級收進同一「樣式」原生 Popover，入口顯示目前值；依工具顯示有效設定，切工具不自動展開。裁切同頁 dialog 使用本機 Cropper.js 2.3.1／MIT，新增比例、矩形／圓角／正圓及七平台的 29 個固定尺寸預設；官方建議與常用範本分開標示。原始檔不覆寫，圖片不外傳，未納入 AI 擴圖或 AI App 傳送。
+- `npm test` **132 項通過**，含六項裁切幾何／比例／形狀／向量轉換／遮罩及平台資料驗證；`npm run check` 與 `git diff --check` 通過。沒有 build／monitor script，不增加額外建置。
+- 隔離 Headless Edge 實際載入 v1.8.0，**90 項瀏覽器檢查通過**：樣式操作 21、完整裁切操作 35、真實 Canvas 文件／歷史 13、一般動效與重開生命週期 21。樣式驗證拉桿與顏色即時摘要、分組值、字級、編號設定、點外部／Esc／Tab、Enter／Space 開啟；深淺色與 320px 浮層沒有水平溢出。一般動畫下連續八次鍵盤開關通過。
+- 實際拖曳／方向鍵操作裁切框；七平台尺寸正確載入，圓形 400×400、圓角 1500×500 的透明角落與中心像素正確。真實 PNG 剪貼簿寫入與下載保持尺寸及透明度；小圖顯示放大倍率和清晰度提示。YouTube 安全框可見且不寫入匯出；非正方形圓形輸出與超過像素上限會阻擋套用。320px dialog 無水平溢出，取消不改文件、關閉返回入口，快捷鍵不操作背後畫布。
+- 裁切後文字可再編輯，文字修改與裁切可各自復原；裁切復原的 PNG 與原圖／原標註完全相同，重做還原形狀與尺寸。獨立真實 Canvas 檢查多步裁切、向量縮放、後續標註遵守遮罩、無效裁切不改文件、歷史共用配方；去背以合成透明來源驗證同座標裁切與還原，未重新執行去背模型。新匯入清除舊裁切與歷史。內建 OCR 在裁切及復原後完成，未重跑未修改的加強 OCR／Google 翻譯品質矩陣。
+- 測試發現快取圖片的 `$ready()` 可能早於 Cropper 自身載入／初始置中，且比例設定會於下一個 tick 重設選區；已依載入繪製順序初始化並在比例回呼後限制選區。最終程式連續重開十二次、載入中快速關閉四次沒有越界或應用例外。樣式預量測不暫時套用繼承的 visibility:hidden，避免焦點落在尚不可見的控制項；動效只過渡 opacity。完整流程於移除測試追蹤後重跑通過，既有 Tesseract 參數／解析度診斷仍可見，未觀察到新應用例外或 CSP 錯誤。
+- 已目視 `pagekit-style-{light,dark,narrow}.png`、`pagekit-crop-{circle,dark,narrow}.png`，證據位於 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/`；QA 腳本在忽略的 `output/crop-evaluation/`。封裝逐檔 SHA-256 與來源核對，報告為 `output/packages/package-report.json`，排除測試 profile／評估模型與選用模型權重。
+- 未驗證日常安裝重新載入、獨立 Chrome／實體觸控筆或商店審核；未提交／推送／發布。重新載入 PageKit 並關閉舊編輯視窗後確認 v1.8.0，既有模型可沿用。
+
+## 1.7.1 水平／垂直／45° 直線（2026-11-18）
+
+- 依使用者明確指定新增「直線」，於畫筆旁沿用 daisyUI btn 與既定 Lucide 線段 SVG，不重設品牌／配色／動效；先更新 `docs/UI_INVENTORY.md` 規格。新增純幾何模組 `ocr/line-geometry.js`，端點投影到最近 45° 倍數，支援正反八方向。沿吸附方向限縮於原圖邊界，保持角度；不影響其他工具角度。直線共用一般線寬／顏色，不顯示畫筆圓圈；只點一下不畫圓點，Esc／pointercancel 取消。
+- `npm test` **126 項通過**（新增 5 項八方向、邊界、原圖座標、取消、復原／重做與無箭頭繪製測試）；`npm run check`、`git diff --check` 通過。無 build／monitor script，未額外建置；沒有新增權限、依賴或網路服務。
+- 隔離 Headless Edge 正式編輯器 **49 項檢查通過**：實際鼠標拖曳八方向，canvas 紅色像素包圍盒符合水平／垂直／45°；預覽與放開 PNG 完全一致，每筆一次復原可回原圖。Esc／原地點擊無新增筆畫、重做與線寬變更保留舊筆畫。真實剪貼簿 PNG 與目前 canvas 完全一致、保持 1600×900；PNG 下載成功；色票仍使用原圖，不含直線。兩個近邊界例含圓頭裁切容差，精確端點角度另由單元測試核對。
+- 既有六工具可切換，直線粗細拉桿 Home／End 達 1／30px；深色桌面與 320px 窄視窗已目視，新增第七工具後無水平溢出。真實內建 OCR 成功；未重測本輪未改動的加強 OCR／去背模型、Google 翻譯、日常瀏覽器重新載入或獨立 Chrome／實體觸控筆。未觀察應用例外／新增 CSP 錯誤，原有 Tesseract 模型參數診斷與測試用 Canvas readback 提示仍可見。
+- QA 腳本在忽略的 `output/line-evaluation/ui-check.js`；畫面 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-line-{dark,narrow}.png`。上架包逐檔 SHA-256／大小見 `output/packages/package-report.json`，未提交／推送／發布。重新載入 PageKit 並關閉舊編輯彈窗後確認 v1.7.1。
+
+## 1.7.0 本機色票分析與粗細拉桿（2026-11-18）
+
+- 使用者確認的五項色票設定、5 色預設／3／5／8／12 切換，以及兩組粗細範圍先寫入 `docs/PALETTE_ANALYSIS.md`。沿用既定 daisyUI 5.8.1 與暖黃／深淺色，補官方 range CSS；本機封裝固定 Color Thief 3.5.0 browser module、MIT 授權、tarball integrity 與 SHA-256，不加權限、CDN、模型或一般安裝 build。
+- 色票只讀乾淨的 `image` canvas；取樣上限 65,536 pixels，以 Worker 分析、alpha 加權歸類占比，包含黑白灰。完全透明圖顯示空結果；近似色合併／空群組省略，結果可能不足選定數量。切色數、關閉、換圖與 pagehide 中止工作，延遲回覆以 generation 忽略。只有點色塊才寫 HEX，不讀取剪貼簿。
+- 粗細改原生 input[type=range] 搭配官方 daisyUI range：一般 1–30px（3）、螢光筆 8–60px（20）、step 1；本次值分組保存，匯入後仍保留，文字／編號隱藏拉桿。已完成筆畫與原圖不受新值影響，指標與繪製共用螢光筆寬度。
+- **68 項隔離 Headless Edge 瀏覽器檢查通過**（55 項完整操作／筆畫／版面＋13 項離線／失敗／取消）：真實模組 Worker 擷取已知五色，取樣占比與 30／25／20／15／10% 符合 0.5 百分點容差；含紅色標註後色票仍完全一致。另一張 12 色圖在離線下保留全部 12 色，所有色數模式無 HTTP 請求。深淺色與 320px／12 色垂直捲動無水平溢出、Tab／Shift+Tab 循環與 Esc 返回入口、modal 快捷鍵不操作背後標註。
+- 原始 canvas 像素量測畫筆 1／3／30px、螢光筆 8／20／60px，換算畫面後筆畫厚度與指標一致（抗鋸齒容差 1.4px）；每次復原回原圖。真實滑鼠拖拉、Home／End／ArrowRight、工具切換分組值、換圖保留、文字／編號隱藏控制均通過。含標註的 PNG 真實剪貼簿寫入及下載皆成功、保持 1600×900 原尺寸。真實內建 OCR 完成、模型管理可開，OCR 翻譯與設定控制項仍保留。
+- Worker 失敗、延遲回覆及剪貼簿拒絕以 API stub 模擬；確認關閉會 terminate 並忽略舊回覆、錯誤不顯示舊結果、恢復原生 Worker 可重試、複製失敗仍可手動選 HEX。分析與成功複製使用原生 API。未操作使用者日常瀏覽器、未重測本輪未修改的加強 OCR／去背模型與 Google 翻譯品質矩陣，也未宣稱 Chrome 實機、實體觸控筆或跨螢幕 DPI 已驗證。
+- `npm test` **121 項通過**（新增 9 項色票／透明度／占比／取樣／筆寬測試），`npm run check` 與 `git diff --check` 通過；沒有 monitor／build script，未額外建置。未觀察到應用例外或新增 CSP 錯誤；原有 Tesseract `Parameter not found`／`Estimating resolution` 診斷與測試用 Canvas readback 提示仍可見。
+- 測試設定使用隔離持久 profile，避免 CLI 預設 context 封鎖擴充功能頁。早期 QA 對取樣占比要求零誤差、對聚類色數要求湊滿，以及未等待原生 close／Worker 啟動事件，已修正測試預期與等待條件；55 項完整流程於最終程式碼重跑通過。未掩蓋應用錯誤。
+- 腳本在忽略的 `output/palette-evaluation/`；畫面為 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-palette-{light,dark,narrow}.png` 及 `pagekit-width-slider.png`，已目視確認。封裝排除開發模型／profile／測試，逐檔 SHA-256 與大小見 `output/packages/package-report.json`。未提交／推送／發布；請重新載入擴充功能並關閉舊編輯視窗後確認 v1.7.0。
+
+## 1.6.2 畫筆／螢光筆空心圓指標（2026-11-18）
+
+- 依使用者明確指示，只改畫筆與螢光筆指標；事前設定見 `docs/UI_INVENTORY.md`。共用 `strokeWidth` 保留既有畫筆 2／3／6 CSS px、螢光筆固定 20 CSS px 的繪圖規則。空心黑白細輪廓 SVG 放於 canvas 外，以原圖 draft 筆寬及當下顯示比例對應圓徑；其他工具維持十字、文字／移動指標。
+- 指標無填色、無跟隨動畫，原生滑鼠箭頭僅在圓圈顯示時隱藏；離開畫布、觸控、停用、失焦、被 dialog 遮住時隱藏。觀察 canvas resize、捲動及焦點以更新位置。換圖與關閉清理 SVG／事件；同時移除舊 AnnotationEditor 指標事件，避免多次匯入後舊繪圖 listener 殘留。
+- 隔離 Headless Edge 的正式編輯器 **30 項操作檢查通過**：26 項尺寸／繪圖／生命週期＋4 項深色／窄視窗。畫筆 2／3／6px 的圓徑、圓心與 cursor:none 正確；在原始 canvas 中量測實際畫筆／螢光筆筆畫厚度，換算回畫面後與 6／20px 指標相符（含抗鋸齒容差）。
+- 繪製途中調整視窗，圓徑隨目前 draft 原圖筆寬與新顯示比例更新；放開後恢復下一筆設定的大小。不移動滑鼠時改線寬也能更新。其他四工具指標保留；管理開啟、觸控、失焦、OCR 忙碌時隱藏，完成後恢復。連續匯入只留一個指標覆層，畫一筆後一次復原即回到未標註圖片。
+- 白色與深色圖上移動指標前後 canvas.toDataURL 完全相同，SVG 兩圈 fill=none；指標不屬圖片像素，不會被既有 PNG／剪貼簿 canvas 匯出或原圖 OCR 讀入。390／320px 視窗沒有水平溢出，螢光筆圓圈仍為實際 20px。已目視 `pagekit-cursor-pen.png`／`pagekit-cursor-highlight.png` 的原比例筆畫與空心圓對比，以及 `pagekit-cursor-dark.png`。
+- 早期測試以輪詢等待非常短的 OCR 進度可見，錯過狀態而逾時；已改用 MutationObserver 記錄真實忙碌期間的隱藏狀態，完整重跑 26 項通過。沒有隱藏應用例外；既有 Tesseract 模型參數警告及測試用 Canvas readback 提示仍可見。
+- `npm test` 112 項、`npm run check`、`git diff --check` 通過。新增一個本機幾何指標模組，沒有新權限、模型、外部程式或 build／monitor script。套件與逐檔雜湊詳見 `output/packages/package-report.json`，可選模型／測試仍排除。
+- 畫面證據位於 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/`，QA 腳本於忽略的 `output/brush-cursor-evaluation/`。觸控與 blur 使用事件模擬；未驗證實體觸控筆、不同 OS 游標設定／跨螢幕 DPI、獨立 Chrome 或日常安裝重新載入。未重跑未修改的翻譯／去背模型品質矩陣，既有測試保留；未提交／推送／發布。請重新載入並關閉舊編輯視窗後確認 v1.6.2。
+
+## 1.6.1 集中模型與服務管理（2026-11-18）
+
+- 依使用者確認的集中方案實作；設計與行為已先寫入 `docs/UI_INVENTORY.md`。頁首單一「模型與服務管理」開啟同頁原生 dialog／daisyUI modal，四張卡片分別為內建 OCR、加強 OCR、去背模型、Google 線上翻譯。原左右管理折疊移除，下載／取消／刪除的原 DOM ID 與事件保留，不改快取鍵、模型檔、雜湊、來源權限或背景下載服務。
+- daisyUI 維持 5.8.1，只追加固定官方 modal 預編譯 CSS，更新來源與 SHA-256；沒有遠端 UI 程式、UI JS 套件或 build。缺模型時導向對應下載；關閉管理不停止下載，頁首提示下載中，可重新開啟查看進度／取消。關閉整個編輯視窗維持既有中止規則。
+- 隔離 Headless Edge 實際載入 v1.6.1，**42 項瀏覽器檢查通過**：27 項管理介面／流程＋15 項真實模型回歸。確認單一入口、四種分類、內建／線上服務沒有安裝刪除按鈕、正確大小、兩種缺模型導引、深淺色、390／320px 邊界及鍵盤／關閉行為。
+- 發現 daisyUI 的可見性過渡會讓開啟焦點停留背景，且原生 Tab 在邊界可移到瀏覽器工具列；已限定管理容器的可見性與 opacity 過渡、於首個開啟 layout 設焦點、補齊 Tab 首尾循環與關閉後返回焦點。完整 27 項重跑通過。Esc／關閉鈕／點背景可關閉，Delete／Ctrl+Z／Esc 不會改背後標註或取消選取。
+- 下載 UI 採 permission／Port 服務替身測拒絕、等待同意時取消、遲到同意不啟動、進度、取消、失敗可重試與完成後狀態。實際關閉管理時 Port 未斷線，重開進度保持，頁首下載提示正確；替身只驗證 UI 狀態／連線生命週期，不宣稱重新下載了實際模型或通過原生允許提示。既有服務層取消／大小／SHA-256／跨視窗鎖定測試保留。
+- 真實模型以原格式種入獨立測試設定檔：加強 OCR 與去背都可直接讀取既有資料，不需轉換或遷移。內建／加強 OCR 均辨識出 `Need help?`，Google 手動翻譯成功；開關管理保留畫布、原文與譯文。正式去背 Worker 仍產生透明 alpha 並保留編號，還原後 canvas 完全相同；處理中管理的刪除／下載按鈕維持鎖定。
+- 統一入口真實刪除驗證：先刪去背，IndexedDB 狀態為 OCR=true／去背=false；恢復去背測試快取後刪 OCR，狀態為 OCR=false／去背=true，且引擎切回 standard、自動重辨與標註仍正常。操作只影響隔離設定檔，未碰日常使用者模型。
+- `npm test` **112 項**、`npm run check`、`git diff --check` 通過；本輪新增介面以瀏覽器實測，未增加鏡像元件測試。無 monitor／build script，不執行額外 build。ZIP **74 檔、17.51 MiB**，每項 SHA-256 與來源一致，含管理模組／官方 CSS／授權，排除 output 與可選模型；見 `output/packages/package-report.json`。
+- 已目視管理視窗與工作區，證據在 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-model-services-installed-{light,dark}.png`、`pagekit-model-services-narrow.png`、`pagekit-model-services-workspace.png`。QA 腳本在忽略的 `output/model-services-evaluation/`。既有 Tesseract 模型參數診斷仍可見；沒有觀察到新應用例外或 CSP 錯誤。
+- 本輪未重新驗證真實模型網路下載、原生首次來源允許提示、日常瀏覽器重新載入、獨立 Chrome 或商店審核；不改既有已測下載實作。未提交／推送／發布。請重新載入擴充功能、關閉舊編輯彈窗後確認 v1.6.1；現有模型可沿用。
+
+## 1.6.0 OCR 結果手動翻譯（2026-11-18）
+
+- 五項使用者回答及規格在 `docs/OCR_TRANSLATION.md`：手動翻譯完整結果框（含修改）、預設繁中／更多語言、原文下方譯文、明確按鈕複製、沿用 Google。實作十五種白名單語言，沿用 daisyUI／配色，不另開視窗或頁籤，不改既有 OCR、去背模型與選取翻譯方向。
+- 新專用 Port 僅接受自己編輯頁；背景固定 Google 端點、來源自動偵測、選定目標、不帶 Cookie。上限 30,000 UTF-16 字元；以 URL 編碼長度分段、保留 surrogate pair、空白及換行，全部成功後才提交。每段 15 秒、整體 90 秒。原文／語言變更、重辨、匯入與關閉時取消；無新權限、外部依賴或 build。
+- `npm test` **112 項**、`npm run check`、`git diff --check` 通過。新增七項測試覆蓋非法內容／語言／長度／Unicode、完整分段、目標與來源、失敗／取消不回部分結果、Port 來源隔離、重複啟動／斷線及終態；原有網頁選取翻譯與 TTS 測試保留。
+- 隔離 Headless Edge 真實 MV3 v1.6.0 **24 項操作檢查通過**：16 項實際服務與 UI＋8 項過期請求／長文／重辨。合成圖片經真正 Tesseract 自動取得 `Need help?` 與 `Get in touch with our experts.`，OCR 完成後 Google 翻譯請求數為 0；手動點擊才呼叫真實 Google 翻譯為繁中。手動將原文改為兩行英文後選日文，傳出的完整文字、sl=auto、tl=ja、credentials=omit 均核對，得到真實日文結果。
+- 真實翻譯沒有呼叫 clipboard.writeText；明確點「複製譯文」才以本次譯文寫入。測試只記錄本次寫入參數並呼叫真正寫入 API，沒有讀剪貼簿。翻譯前後原圖 canvas 完全相同；斷網保留原文／剪貼簿並可重試。譯文位於原文下方，淺／深色、390／320px 沒有水平溢出，新增 btn／select／textarea 均用 daisyUI。
+- 延遲服務替身驗證編輯原文／切換語言會透過 Port 斷線實際觸發背景 fetch 的 AbortSignal，遲到結果不顯示；不會自動重翻。長文服務替身分五段回傳，完整保留中文、英文、emoji、空白與換行；沒有再寫剪貼簿。超過上限不發請求、不截斷。長文測試檢查分段／重組，不代表大篇幅真實服務的品質或吞吐驗證。
+- 重新 OCR 正確清除舊譯文，內建自動辨識與複製原文保留。測試中初次沒有展開辨識設定、以及未等待 300ms 重辨排程造成等待／斷言失敗，已改用真實展開操作並等譯文失效及辨識結束，再完整重跑八項通過；不是隱藏產品錯誤。
+- 套件 **73 檔、17.51 MiB**，ZIP 每項 SHA-256 與來源一致，含兩個新 OCR 翻譯模組；排除測試、output 及可選模型。套件報告 `output/packages/package-report.json`；瀏覽器 QA 腳本於忽略的 `output/translation-evaluation/`。本專案沒有 monitor 或 build script，未新增假檢查。
+- 已目視實際畫面：`C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-ocr-translation-{light,dark,narrow}.png`。既有 Tesseract 模型參數診斷仍可見，未觀察到應用例外或 CSP 錯誤。
+- 未實測其餘十三種語言的真實翻譯品質、獨立 Chrome、Google 服務長期可用性或日常瀏覽器重新載入。沒有重跑去背品質／模型下載全矩陣（相關程式未改）；沒有提交／推送／發布。使用者須重新載入擴充功能並關閉舊編輯彈窗，才會看到 v1.6.0。
+
+## 1.5.0 本機去背與圖片匯入（2026-11-18）
+
+- 依六項使用者回答實作商品／人物、截圖／圖片右鍵／本機匯入、全程本機、模型按需下載可刪、透明 PNG 複製／下載、自動預覽／還原。問答及比較在 `docs/BACKGROUND_REMOVAL.md`；維持 daisyUI 與既定暖黃風格，不引入新 UI Kit。
+- 使用 MIT 的 BiRefNet Lite Web 512，固定 revision `f01535dcce4c28a8688ee631ca15719b779b3f86`、101,066,931 bytes、SHA-256 `20e3fb3e7bbb75e0b4f152759413a6ab19a599a1c2e1db7ce7741792eaf639fb`。模型來自 Hugging Face，自選下載後獨立存於 `pagekit-cutout-models`；只增加 Hugging Face 與固定 CDN 的選用來源權限。ONNX Runtime 1.31.1 的 53KB WASM JS 入口本機封裝，重用既有 OCR WASM；沒有遠端程式或新 build。
+- 正式 `downloadCutout` 下載函式實際對固定模型網址發出 HTTPS GET，完整取得檔案且通過雜湊，約 10.4 秒；此測試在 Node，驗證保存前的資料與進度，不代表原生權限允許已驗收。下載證據：`output/bg-evaluation/download-check.json`。測試模型僅保留於忽略的 output／隔離瀏覽器，沒有安裝至日常設定檔。
+- 隔離 Headless Edge 實際 MV3 頁面與 Dedicated Worker／WASM，在 `connect-src 'self'` 下完成去背。合成圖初測背景 alpha 0、主體 alpha 255，約 12.2 秒。商品與人物使用 rembg 專案的 `examples/car-1.jpg`、`girl-1.jpg` 作評估，不重新分發或納入 ZIP，不代表普遍品質保證。
+- **36 項瀏覽器檢查通過**（13 商品／匯出＋9 人物／邊界＋10 OCR／模型回歸＋4 最終控制）：商品照片 480×360 與人物 600×399 均移除背景、保留前景及原尺寸；人物身體取樣 alpha 255、背景 0。兩者斷網可去背，商品推論期間外部 HTTP 請求為 0。已目視去背邊緣、淺色／深色及 390／320px 窄視窗，沒有水平溢出。
+- 實際 `navigator.clipboard.write` 寫入 image/png；只檢查本次寫入的 Blob、不讀剪貼簿，alpha 及尺寸保持。實際下載 PNG 並重新解碼，背景 alpha 仍為 0、480×360；棋盤不在匯出圖片。取消推論不改畫布；去背／還原保留既有編號，還原後可復原標註。匯入透明 PNG 保留 alpha，壞掉的 PNG 不覆蓋目前圖片。
+- 截圖 job 使用與圖片右鍵相同的 session／target 結構種入合成圖，正確裁為 600×400；內建及加強 OCR 均取得 `ORIGINAL OCR`。去背保留 OCR 結果，程式繼續從原始 image canvas 重辨，未把去背底圖或標註送入 OCR。刪除去背模型後 OCR 模型仍存在且可正常辨識；沒有混用資料庫或清除兩種模型。
+- 缺模型導引、刪除、拒絕來源權限、等待權限期間取消且遲到同意不啟動下載、OCR 下載期間跨工具鎖定／取消後解鎖通過。拒絕與等待同意使用測試頁內的 permission API 替身，沒有自動允許原生提示。服務層下載大小／雜湊／取消／失敗、獨立路由／權限與刪除隔離有 Node 測試；原生允許提示與下載成功的完整 UI→權限→背景→保存流程仍未完整實測。
+- `npm test` **105 項**、`npm run check`、`git diff --check` 通過；無 monitor／build script。1.5.0 ZIP **71 檔、17.50 MiB**，所有 ZIP 項目 SHA-256 與來源一致，排除 output、測試、可選 OCR／去背權重。詳見 `output/packages/package-report.json`。
+- 最終畫面證據在 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-cutout-product.png`、`pagekit-cutout-portrait-dark.png`、`pagekit-cutout-narrow.png`。既有 Tesseract 模型參數診斷與測試用 Canvas readback 提示仍可見；沒有觀察到新去背 CSP 或應用例外。
+- 未重新操作日常瀏覽器、原生圖片右鍵選單、首次下載允許提示、獨立 Chrome 或商店審核；入口有既有背景測試，工具列匯入入口新增 Node 檢查。細髮、玻璃、多主體及低對比圖片仍須核對，沒有手動遮罩筆刷。未提交、推送、發布；更新需重新載入擴充功能與網頁，新模型需使用者自行選擇下載。
+
+## 1.4.1 全介面盤點與補齊（2026-11-18）
+
+- 前輪主要驗證截圖編輯頁，沒有完整涵蓋文字浮窗及網頁內工具。這次逐一盤點所有自訂 UI，補齊文字編輯 card／textarea、翻譯 card／badge／btn、選字 join／alert、框選提示 card／btn，抽出共用 `ocr/ui-theme.css`。背景只讀固定本機 CSS，不增加權限或 web_accessible_resources；載入失敗保留備援樣式、後續可重試。
+- 完整設計設定、介面清單與原生介面例外見 `docs/UI_INVENTORY.md`，AGENTS.md 只記硬限制與文件入口。沿用使用者選定的 daisyUI／暖黃色與既有字體，不推定未回答的 TA 或品牌偏好。
+- 隔離 Headless Edge 載入實際 MV3 1.4.1、新建測試設定檔，共 **50 項**通過：28 項編輯器＋22 項網頁工具。編輯器含六種標註、編號刪除／復原／重做、文字完成／取消／換行／IME／Esc、14px 可讀主題文字、單一焦點框、白色標註設定、深淺色、320／390px 邊界、表單元件與 details 鍵盤操作。標註後 OCR 結果不變。
+- 網頁工具用刻意污染 button／textarea 的合成測試頁，驗證 Shadow DOM 樣式隔離、選字工具 ArrowDown 焦點、Google Translate 真實成功回覆、原文複製成功回饋、朗讀開始／再次點擊停止狀態、深淺色與 reduced-motion、320px 翻譯卡片邊界、斷網錯誤及關閉恢復。未驗證喇叭聲音品質。發現並修正選字觸發鈕點擊未聚焦、keyup 排程重建工具導致焦點遺失。
+- 框選使用正式 content／背景流程，將合成截圖種入獨立測試 session；取消按鈕／Esc、範圍太小、交接失效錯誤、成功裁切並開啟真實編輯彈窗均通過，裁切為 440×250。未操作日常瀏覽器右鍵或讀取使用者頁面圖片。
+- `npm test` **98 項**、`npm run check`、`git diff --check` 通過。沒有 monitor 或 build script，不另執行不存在的指令。套件 **61 檔、17.47 MiB**，逐項 SHA-256 與來源相符，包含共用主題／背景載入器／授權，排除測試及可選模型；報告見 `output/packages/package-report.json`。
+- 已目視新版文字浮窗、翻譯浮窗與框選提示。截圖在 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-text-editor-{dark,light}.png`、`pagekit-translation-{dark,light}.png`、`pagekit-selection-tool.png`、`pagekit-capture-tool.png`。測試頁 favicon 404 與 Tesseract 原有診斷不屬應用錯誤。
+- 原生權限／另存視窗、色盤、右鍵選單外觀與快捷鍵設定頁由瀏覽器提供，不能套用 daisyUI。模型下載進度／取消／錯誤沿用 Node 回歸及前輪紀錄，本輪未重新下載模型，也未重測加強 OCR 準確率、首次授權允許、所有網站或獨立 Chrome。沒有提交／推送／發布，日常安裝尚需重新載入 1.4.1 並重新整理網頁。
+
+## 1.4.0 daisyUI 截圖編輯彈窗（2026-11-18）
+
+- 本機封裝 daisyUI 5.8.1 官方預編譯 CSS，保留 MIT 授權、npm SHA-512 與產出 SHA-256；`npm run check` 核對 UI 資源且拒絕外部 CSS 匯入。未加入 Tailwind 瀏覽器執行器、UI JavaScript、遠端字型、權限或一般安裝 build。
+- 新版畫面：頂部品牌／匯出與六種標註工具，左側完整圖片預覽、右側 OCR 結果；辨識設定、模型管理及說明使用可鍵盤操作的原生 details 預設收合。缺少加強模型時自動展開模型管理並聚焦下載。原有 OCR 原圖輸入及標註資料結構未改。
+- 測試環境：Browser plugin not available，依 Playwright skill 使用隔離 Headless Edge、獨立測試設定檔，直接載入 `chrome-extension://cnghcoibgjldffcaaabhinindhdekpok/ocr/ocr.html`。桌面 1440×900／1200×820，另測 768×900、390×844、320×780；同時檢查系統深淺色與 reduced-motion。設計概念及最新實作截圖皆以 view_image 目視比對；保留既有品牌圖示，概念圖的未實作快捷鍵未引入產品。
+- 39 項主要瀏覽器檢查通過：頁面身份／非空畫面、六種標註、任意位置文字輸入與拖曳、編號新增／Delete／復原／重做、原圖 OCR 隔離、PNG 下載、實際剪貼簿 image/png 與文字寫入、手動修改／複製、設定重辨、加強 OCR 斷網自動辨識與複製、引擎切換保留標註、低可信度候選開關、模型刪除／缺少模型導引／拒絕授權、空白與錯誤狀態、響應式及深色模式。UI 與 OCR 驗證期間沒有外部 HTTP 請求。
+- 額外檢查直式 600×1100 圖片：完整預覽、390px 窄視窗邊緣文字輸入及 Enter 收合設定通過；從實際下載串流讀取 PNG 簽章／IHDR，匯出仍為 600×1100，未被顯示縮放改變。文字與圖片剪貼簿測試只攔截記錄寫入參數並呼叫真正寫入 API，沒有讀取剪貼簿。
+- `npm test` 95 項、`npm run check`、`git diff --check` 通過；只新增兩項圖片顯示比例／無效尺寸測試。套件 58 檔、約 17.47 MiB，ZIP 每一項 SHA-256 與來源一致，包含 UI CSS／授權，不包含評估模型或 npm 依賴。報告見 `output/packages/package-report.json`。
+- 沒有應用程式例外、框架錯誤遮罩或 CSP 錯誤；Tesseract 原有模型的 `Parameter not found` 警告及 `Estimating resolution` 診斷仍輸出到 stderr，已與應用錯誤區分，辨識成功。三份最新外觀證據位於 `C:/Users/jason.wang/.codex/visualizations/2026/11/16/01a1e286-cb4f-7b51-8a5a-8113e2436f8b/pagekit-ui-{desktop,narrow,dark}.png`。
+- 工作以 storage.session 種入測試截圖，模型快取只寫入隔離設定檔，未變更日常安裝。首次下載來源授權的拒絕使用模擬回覆，原生允許提示、日常右鍵／快捷鍵、獨立 Chrome、商店審核及使用者日常瀏覽器重新載入未驗證；相關背景入口維持既有 Node 測試。未提交、推送或發布。
+
+## 1.3.1 圖示誤辨低可信度短字（2026-11-18）
+
+- 使用回報附圖的圖片區域重建 761 × 521 輸入並跑正式 Paddle worker；截圖縮放重建後，遙控器圖示被辨為 `l`（0.3657），磁鐵內另出現極小 `1`（0.2820），八行正文均在 0.978 以上。回報畫面顯示 `la`，不能把重建結果視為原始未縮放圖片的完全重現。
+- `paddle-result.js` 預設略過有可靠正文背景、孤立且幾何形狀符合圖案的極低分短候選；保留同行短詞／單位、正常大小數字、中文、長詞與可信短字。無足夠正文時不過濾，且不依 `la` 等特定字串判斷。UI 提示數量，提供「顯示低可信度候選」還原，仍可能誤略過真實短字。
+- 隔離 Edge 的實際編輯頁驗證：預設僅輸出 Magnetic、Attachment、Dongle Free、Installation、Tilt and Pressure、Sensitivity、Remote、Presentation 八行；勾選後還原 `1`、`l`，取消勾選再移除。三次結果均與送往實際 `clipboard.writeText` 的字串一致，狀態顯示自動複製成功；沒有讀取剪貼簿。
+- 原始模型輸出回歸資料：`test/fixtures/paddle-icon-noise.json`；瀏覽器證據：`output/ocr-evaluation/noise-baseline-result.json`、`noise-ui-result.json`。原圖與裁切圖只保留於忽略的 output，不納入套件或提交。
+- `npm test` 93 項、`npm run check`、`git diff --check` 通過；六項新增測試包含真實模型結果、不同短字、同行單位／編號、高分與中文保留、缺少正文及還原／雙欄。既有八張模型輸出回放有七張未略過任何候選；海報另外移除圖示上的極小低分 `2`，其餘結果不變，沒有以字典校正內容。回放證據：`output/ocr-evaluation/noise-corpus-check.json`。
+- 1.3.1 ZIP 約 17.45 MiB，逐檔雜湊比對通過；未加入新模型、外部依賴、權限或 build。詳見 `output/packages/package-report.json`。
+- 版號同步為 1.3.1；加強模型資料／快取識別與執行資源未改，不需重下載模型。日常瀏覽器重新載入、原始未縮放圖、多種網站的普遍準確度及商店審核未驗證；未提交／推送。
+
+## 1.3.0 可選模型下載與加強 OCR（2026-11-17）
+
+- 預設 Tesseract 保留；新增 PP-OCRv6 Small 的進度、取消、SHA-256／大小驗證、兩檔原子保存、引擎偏好與刪除。下載僅為固定模型 GET，不傳送圖片；程式和 WASM 隨套件封裝。OpenCV 四個動態綁定產生器改為靜態閉包，無 unsafe-eval。
+- `npm test` 87 項、`npm run check`、`git diff --check` 通過。新增測試涵蓋錯誤雜湊、截斷／超長、第二檔失敗、取消、未授權來源、重複下載、多視窗刪除鎖定、斷線中止、偏好與座標閱讀順序。只重建必要第三方執行資源，未新增一般應用 build。
+- 隔離 Edge 載入實際 MV3 v1.3.0，使用封裝程式和 WASM＋本機模型快取，在瀏覽器斷網狀態下對 18 px／12 px 繁中英文、Support 清單、斜體中文共四張圖片，自動辨識且自動複製成功。18 px 保留「開發者」、Jason Wang、PD5520、500 nits、Anti-Glare；12 px 仍有「圖／周」、「傳／傅」等誤字，Support 的 `Setting.product data` 仍需核對，不宣稱所有圖片都更準。
+- 實際透過正式 `downloadModels` 函式向兩個官方 HTTPS 網址下載共 31,211,520 bytes，驗證雜湊後成功寫入 IndexedDB。此網路測試使用隔離擴充功能測試頁（不進 ZIP），獨立驗證資料下載及儲存，不代表原生權限提示已驗收。測試產物：`output/ocr-evaluation/download-network-result.json`。
+- 編輯頁 UI 以模擬權限回覆驗證拒絕、等待同意期間取消及遲到同意，不開始下載、不切換引擎。正常瀏覽器的首次來源授權提示仍需使用者手動允許，未自動操作或繞過。背景服務的未授權拒絕、核准後進度／完成流程與多視窗狀態另由單元測試驗證。
+- 刪除按鈕實際清空模型資料庫、偏好切回 standard；既有圖片仍在，內建引擎接手。離線 UI 證據：`extension-ui-result.json`；worker／CSP：`extension-paddle-result.json`；權限取消：`model-controls-result.json`，均位於 `output/ocr-evaluation/`。測試模型種入只發生在隔離設定檔，不是日常瀏覽器安裝。
+- `scripts/package-extension.ps1` 以明確清單打包並逐檔比對 ZIP SHA-256。初次 1.3.0 套件 53 檔、約 17.45 MiB，排除 output、node_modules、Git、測試、未使用圖示及所有可選模型 tar／onnx；約 31.2 MB 模型獨立下載。最終檔名及雜湊見 `output/packages/package-report.json`。
+- 未操作日常瀏覽器重新載入、未提交／推送／上架，亦未宣稱通過商店審核。使用者需關閉舊彈窗，在擴充功能管理頁重新載入後確認 v1.3.0；模型為自選下載。
+
+## 1.2.13 網頁清單漏字、圓點與連結底線（2026-11-17）
+
+- 使用最新使用者附件左側可見圖片區域 630 × 698 px，以及由同區域縮至 308 × 341 px 的版本驗證；附件未提供原始 308 × 362 圖檔，未將縮圖宣稱為原始擷取像素。兩者均包含畫面可見的八行文字。
+- 原本整頁 PSM 3 會把圓點辨成引號、星號或其他符號，藍色連結底線造成字距／字元錯誤；單一頁面底色處理也無法兼顧白底文字與深色按鈕。
+- 新增 `ocr/text-layout.js`。只有找到至少四行、行距明顯、對齊圓點或實色按鈕，且沒有未覆蓋的大型圖片時，才走清單逐行處理；寬行距的一般段落維持整頁辨識。既有雙欄及比較圖仍優先使用原流程。
+- 圓點依像素的大小、形狀、位置與間距獨立處理；每行各自判斷底色、放大一次，深色按鈕反相後以 Otsu 分開背景與文字。藍色連結產生保留下降筆畫的去底線候選，只有 OCR 分數改善才採用；不硬編碼 Support、Customizations 等字詞，也不直接將辨識字串中的底線改成空格。
+- 隔離 Edge 實際載入 v1.2.13；繁中＋英文預設自動辨識、勾選 2 倍、純英文，均讀出以下完整結果，兩種尺寸測試通過：
+
+```text
+Support
+• Set up guide
+• Setting product data
+• Feed generation options
+• Customizations
+• Feature requests
+Troubleshooting info
+Open support ticket
+```
+
+- 原始 canvas 在辨識前後完全相同；結果與自動複製呼叫內容一致，剪貼簿使用測試替身，未讀寫系統剪貼簿。離線選項切換成功，外部 HTTP/HTTPS 請求為 0；既有模型參數相容警告保留。
+- 回歸雙欄圖文標題／說明／細字註腳、斜體中文 `開發者: devenzi`，及比較圖四個主要標籤均通過。新增段落不誤判、清單／照片排除、邊緣直線、圓點與句點區別、底線／下降筆畫、按鈕灰底分離測試。
+- `npm test` 79 項通過；`npm run check`、`git diff --check` 通過，無 build 步驟。未操作日常瀏覽器重新載入、未重測原生右鍵入口、未提交或推送。需關閉舊彈窗，重新載入頁匣 PageKit 後再擷取，確認頁首 v1.2.13。不同字型、低解析度與複雜版面仍需核對。
+
+## 1.2.12 頁匣 PageKit 更名（2026-11-17）
+
+- 顯示名稱統一為「頁匣 PageKit」，套件名稱為 `pagekit`，同步 manifest、工具列標題、選取翻譯按鈕提示、截圖編輯彈窗、Console 前綴、PNG 下載檔名、README、AGENTS、隱私說明及圖示設計文件。
+- 正式圖示與 SVG 母稿改用 `pagekit-*`／`pagekit.svg` 檔名，更新 manifest、編輯彈窗與重建腳本；重新輸出全部尺寸並通過 PNG 格式／尺寸檢查。原有翻譯／OCR 功能、權限與封裝模型保留。
+- 保留本地安裝目錄及 GitHub repository 原網址；舊分頁用的內部狀態與 iframe 座標通道維持相容，翻譯注入版本更新為 `1.2.12-pagekit`。
+- 隔離 Edge 真實載入 v1.2.12，讀回 manifest 名稱「頁匣 PageKit」、標題「截圖編輯 · 頁匣 PageKit」、頁首「頁匣 PageKit v1.2.12」，新路徑圖示成功載入。實際點「下載 PNG」，下載檔名為 `pagekit-<時間戳>.png`；390 px 寬度沒有水平溢出。
+- 比較圖載入後仍自動辨識到 `Normal panel`、`AG Neovo panel`、`500 nits` 及 `Anti-Glare`。剪貼簿沿用測試替身，未讀寫系統剪貼簿。已檢視新版彈窗截圖，未隱藏既有模型參數相容警告。
+- `npm test` 72 項通過；`npm run check`、`git diff --check` 通過。未操作使用者日常瀏覽器重新載入，未提交或推送；需重新載入既有擴充功能並關閉舊彈窗，才會顯示新版名稱。
+
+## 1.2.11 比較圖誤字與圖示小字（2026-11-17）
+
+- 同版圖示調整：SVG 母稿改為四角截圖框與交錯「文／A」，以既有 renderer 重建 16／32／48／128 px 及 1024 px 母圖。已檢視 128 px 與各尺寸在淺／深底上的像素預覽；manifest 工具列與管理頁、編輯彈窗均引用更新後路徑。文字已轉為向量路徑，不需使用者電腦字型。未重新載入日常瀏覽器圖示快取。
+- 以使用者最新比較圖的圖片區域 948 × 499 px 重現：原流程將燈具／圖案辨成「人」與引號、波浪符號，並漏掉圓形圖示中的 `500 nits`、`Anti-Glare`。未修改測試圖片或加入這些標籤的詞庫替換。
+- 新增淺底大型圖案偵測與「圖示／比較圖」版面。整圖及重疊上下區域各以原尺寸／放大尺寸辨識，要求文字與原圖座標一致、可信度足夠，再依位置合併。保留不同位置的相同文字與緊鄰文字的標點；圖案誤字沒有使用特定字黑名單。單張工作仍共用原本中文校正額度。
+- 隔離 Edge 載入正式 v1.2.11；從 session 圖片載入後自動辨識，預設繁中＋英文、自動模式及勾選 2 倍均取得以下結果，沒有上述雜字：
+
+```text
+Normal panel
+AG Neovo panel
+
+500 nits
+Anti-Glare
+```
+
+- 切換「圖示／比較圖」及純英文後，同樣取得四個標籤，另外取得照片中實際存在的 `House`；照片手寫裝飾字與極小字並未完整辨識。此版本改善這張圖的主要標籤，不代表整張照片的所有文字都能還原。
+- 離線重辨及選項切換通過，外部 HTTP/HTTPS 請求為 0；原圖 canvas 前後完全相同。顯示與自動複製呼叫的內容一致，剪貼簿使用測試替身，未讀寫系統剪貼簿。模型設定相容警告仍可見，未隱藏。
+- 回歸先前雙欄圖文，兩側標題、說明與細字註腳完整保留；斜體中文範例仍取得 `開發者: devenzi` 並保留前方英文。
+- `npm test` 72 項通過；`npm run check`、`git diff --check` 通過，無 build 步驟。未操作日常瀏覽器重新載入、未重新測試原生右鍵入口、未提交或推送此版本。使用者需重新載入擴充功能並關閉舊彈窗後再截圖。
+
 ## 1.2.10 右鍵選單名稱（2026-11-16）
 
 - 依使用者指定，右鍵選單更名為「截圖與標註」及「圖片文字辨識」，同步無截圖時的介面提示與 README；選單 ID 與處理流程維持不變。

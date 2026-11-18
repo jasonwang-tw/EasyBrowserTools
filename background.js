@@ -1,5 +1,14 @@
 import { translateTextGoogle, fetchGoogleTTS } from './translation-service.js';
 import { MAX_CAPTURE_LENGTH, JOB_TTL, screenshotRect } from './ocr-utils.js';
+import { installModelService } from './ocr/model-download.js';
+import { createUiStyleLoader } from './ui-style-service.js';
+import { installCutoutService } from './ocr/cutout-model-download.js';
+import { installOcrTranslation } from './ocr/translation-port.js';
+
+installModelService();
+installCutoutService();
+installOcrTranslation();
+const loadUiStyles = createUiStyleLoader(path => chrome.runtime.getURL(path));
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
@@ -9,6 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
       { id: 'image-ocr', title: '圖片文字辨識', contexts: ['image'] }
     ]) chrome.contextMenus.create({ ...menu, documentUrlPatterns: ['http://*/*', 'https://*/*'] });
     chrome.contextMenus.create({ id: 'screenshot-shortcut', title: '設定截圖快捷鍵', contexts: ['action'] });
+    chrome.contextMenus.create({ id: 'import-image', title: '匯入圖片／本機去背', contexts: ['action'] });
   });
 });
 
@@ -94,7 +104,7 @@ async function requestSelectionTranslation(tabId, frameId = 0, text) {
   try {
     await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, files: ['content/translate-popup.js'] });
     await chrome.tabs.sendMessage(tabId, { type: 'TRANSLATE_SELECTION', data: { text } }, { frameId });
-  } catch (error) { console.warn('[Easy Browser Tools] 無法在此頁面翻譯：', error.message); }
+  } catch (error) { console.warn('[頁匣 PageKit] 無法在此頁面翻譯：', error.message); }
 }
 
 function openShortcutSettings() {
@@ -103,6 +113,7 @@ function openShortcutSettings() {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'import-image') return editorWindow('ocr/ocr.html', Boolean(tab?.incognito));
   if (info.menuItemId === 'screenshot-shortcut') return openShortcutSettings();
   if (tab?.id != null && ['screenshot-ocr', 'image-ocr'].includes(info.menuItemId)) return requestScreenshot(tab, info.menuItemId === 'image-ocr' ? { frameId: info.frameId ?? 0, srcUrl: info.srcUrl } : undefined);
   if (info.menuItemId === 'instant-translate' && tab?.id != null && info.selectionText?.trim()) return requestSelectionTranslation(tab.id, info.frameId ?? 0, info.selectionText.trim());
@@ -127,6 +138,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
   let request;
   if (message.type === 'TRANSLATE_WORD') request = translateTextGoogle(message.data?.text);
+  else if (message.type === 'GET_UI_KIT') request = loadUiStyles();
   else if (message.type === 'TTS_FETCH') request = fetchGoogleTTS(message.data?.text, message.data?.lang).then(base64 => ({ base64 }));
   else if (['REGION_CAPTURE_COMPLETE', 'REGION_CAPTURE_CANCEL'].includes(message.type)) request = finishRegion(message, sender);
   else if (message.type === 'OPEN_SHORTCUT_SETTINGS' && !sender.tab?.url?.startsWith('http')) request = openShortcutSettings().then(() => ({}));

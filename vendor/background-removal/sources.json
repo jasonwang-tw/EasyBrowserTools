@@ -1,0 +1,19 @@
+{
+  "runtime": "onnxruntime-web 1.31.1 (MIT)",
+  "runtimeLicense": "../paddle/licenses/onnxruntime-MIT.txt",
+  "runtimeWasm": "../paddle/ort/",
+  "upstream": "https://huggingface.co/clevr-tools/birefnet-lite-web/resolve/f01535dcce4c28a8688ee631ca15719b779b3f86",
+  "revision": "f01535dcce4c28a8688ee631ca15719b779b3f86",
+  "model": {
+    "name": "BiRefNet Lite Web 512",
+    "bytes": 101066931,
+    "sha256": "20e3fb3e7bbb75e0b4f152759413a6ab19a599a1c2e1db7ce7741792eaf639fb",
+    "filename": "birefnet_lite_512_fp16w.onnx",
+    "license": "MIT"
+  },
+  "assets": {
+    "ort.wasm.min.mjs": "c21d9c326d453a4a61398270c804d5979e118540597cb0c07f7b3d64e6098234",
+    "LICENSE": "ee3d386c9db2d5f8342e7e1e3e1ed2930b7a1ca652f61fcc006a2c9f9447ba41",
+    "NOTICE": "639ca63bbdb72082f16f0126dafad9746f4d05fb85562677cc037dc80504a57d"
+  }
+}
