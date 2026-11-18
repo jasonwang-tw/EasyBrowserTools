@@ -1,9 +1,9 @@
 {
-  "name": "easy-browser-tools",
-  "version": "1.2.10",
+  "name": "pagekit",
+  "version": "1.8.2",
   "private": true,
   "type": "module",
-  "description": "Easy Browser Tools — 選取翻譯與本機截圖 OCR 瀏覽器擴充功能",
+  "description": "頁匣 PageKit：瀏覽器效率工具箱，提供即時翻譯、截圖標註與本機 OCR",
   "scripts": {
     "test": "node --test",
     "check": "node scripts/check.mjs"

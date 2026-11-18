@@ -1,6 +1,9 @@
 import { recognizeWithCjkRecovery } from './cjk-recovery.js';
+import { hasLargeGraphic, recognizeDiagram } from './diagram-recognition.js';
+import { findTextLines, structuredTextLines, leadingBullet, blueUnderlineRows, withoutBlueUnderline, thresholdDarkRow } from './text-layout.js';
+export { findTextLines } from './text-layout.js';
 
-const PAGE_MODES = { auto: '3', document: '6', scattered: '11', columns: '3' };
+const PAGE_MODES = { auto: '3', document: '6', scattered: '11', columns: '3', diagram: '11' };
 
 export function pageSegmentationMode(layout = 'auto') {
   if (!Object.hasOwn(PAGE_MODES, layout)) throw new Error('不支援的辨識版面');
@@ -71,34 +74,6 @@ export function detectColumnSplit(pixels, width, height) {
   return Math.min(left, right) > width * height / 4 * .015 ? best.split : null;
 }
 
-// Extract short text bands around large illustrations. Tall connected bands
-// belong to photos/diagrams and are not treated as individual text lines.
-export function findTextLines(pixels, width, height, left, right) {
-  const lines = [];
-  let start = null, last = -1;
-  const finish = () => {
-    if (start == null) return;
-    if (last - start + 1 >= 4 && last - start + 1 <= Math.min(64, height * .15)) {
-      let x1 = right, x2 = left;
-      for (let y = start; y <= last; y++) for (let x = left; x < right; x++) {
-        if (isInk(pixels, (y * width + x) * 4)) { x1 = Math.min(x1, x); x2 = Math.max(x2, x); }
-      }
-      if (x2 - x1 >= 12) lines.push({ x: x1, y: Math.max(0, start - 1), width: x2 - x1 + 1, height: Math.min(height, last + 2) - Math.max(0, start - 1) });
-    }
-    start = null;
-  };
-  for (let y = 0; y < height; y++) {
-    let ink = 0;
-    for (let x = left; x < right; x++) if (isInk(pixels, (y * width + x) * 4)) ink++;
-    if (ink >= Math.max(3, (right - left) * .015)) {
-      if (start == null) start = y;
-      last = y;
-    } else if (start != null && y - last > 2) finish();
-  }
-  finish();
-  return lines;
-}
-
 function enlargeCanvas(canvas, upscale) {
   const scale = upscale ? Math.min(2, Math.sqrt(16_000_000 / (canvas.width * canvas.height))) : 1;
   if (scale <= 1) return canvas;
@@ -109,19 +84,77 @@ function enlargeCanvas(canvas, upscale) {
   return enlarged;
 }
 
+async function recognizeStructuredRows(canvas, lines, recognize, { background, onSegment }) {
+  const parts = [];
+  for (const [index, line] of lines.entries()) {
+    onSegment(index, lines.length);
+    const row = canvas.ownerDocument.createElement('canvas');
+    row.width = line.width; row.height = line.height;
+    const context = row.getContext('2d');
+    context.drawImage(canvas, line.x, line.y, line.width, line.height, 0, 0, row.width, row.height);
+    const image = context.getImageData(0, 0, row.width, row.height);
+    const original = image.data.slice();
+    const prepared = prepareOcrPixels(original, background);
+    image.data.set(prepared.inverted ? thresholdDarkRow(prepared.pixels) : prepared.pixels);
+    const bullet = prepared.inverted ? null : leadingBullet(image.data, row.width, row.height);
+    const left = bullet?.left || 0;
+    const underlines = blueUnderlineRows(original, row.width, row.height, left);
+    const target = canvas.ownerDocument.createElement('canvas');
+    const render = (retry = false) => {
+      const scale = retry ? Math.min(4, 24 / row.height) : Math.max(1, Math.min(4, 32 / row.height));
+      target.width = Math.ceil((row.width - left) * scale) + 20;
+      target.height = Math.ceil(row.height * scale) + 20;
+      context.putImageData(image, 0, 0);
+      const drawing = target.getContext('2d');
+      drawing.fillStyle = '#fff'; drawing.fillRect(0, 0, target.width, target.height);
+      drawing.drawImage(row, left, 0, row.width - left, row.height, 10, 10, (row.width - left) * scale, row.height * scale);
+    };
+    try {
+      render();
+      let { data } = await recognize(target, null, '7');
+      if (underlines.length) {
+        image.data.set(withoutBlueUnderline(image.data, original, row.width, row.height, underlines, left));
+        render(true);
+        const retry = await recognize(target, null, '7');
+        if (retry.data.text.trim() && retry.data.confidence >= data.confidence + (data.confidence < 80 ? 10 : 2)) data = retry.data;
+      }
+      parts.push({ ...data, text: `${bullet && data.text.trim() ? '• ' : ''}${data.text.trim()}` });
+    } finally { row.width = row.height = target.width = target.height = 0; }
+  }
+  const weight = parts.reduce((sum, part) => sum + part.text.length, 0);
+  const confidence = weight ? parts.reduce((sum, part) => sum + (part.confidence || 0) * part.text.length, 0) / weight : 0;
+  return { data: { text: parts.map(part => part.text).join('\n'), confidence }, needsReview: parts.some(part => part.confidence < 75), structured: true, split: null };
+}
+
 export async function recognizeCanvas(worker, canvas, { layout = 'auto', background = 'auto', upscale = false, language, recoverCjk = true, onSegment = () => {} } = {}) {
   const budget = { remaining: 4 };
-  const recognize = (target, rectangle, mode) => recognizeWithCjkRecovery(worker, target, rectangle, { language, mode, recoverCjk, budget });
+  const recognize = (target, rectangle, mode, withBlocks = false) => recognizeWithCjkRecovery(worker, target, rectangle, { language, mode, recoverCjk, budget, withBlocks });
   const mode = pageSegmentationMode(layout);
   const context = canvas.getContext('2d');
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   const prepared = prepareOcrPixels(imageData.data, background);
+  const split = layout === 'columns' ? Math.floor(canvas.width / 2)
+    : layout === 'auto' ? detectColumnSplit(prepared.pixels, canvas.width, canvas.height) : null;
+  const graphic = layout === 'auto' && !split && hasLargeGraphic(imageData.data, canvas.width, canvas.height);
+  const rows = layout === 'auto' && !split && !graphic ? structuredTextLines(prepared.pixels, canvas.width, canvas.height) : null;
+  if (rows) {
+    await worker.setParameters({ tessedit_pageseg_mode: '7' });
+    return recognizeStructuredRows(canvas, rows, recognize, { background, onSegment });
+  }
+  const diagram = layout === 'diagram' || graphic;
+  if (diagram) {
+    // Preserve original colors for comparison pictures. Darkening entire photo
+    // regions can make the engine discard labels inside their outlined icons.
+    if (background === 'dark' && prepared.inverted) { imageData.data.set(prepared.pixels); context.putImageData(imageData, 0, 0); }
+    return recognizeDiagram(canvas, async target => {
+      await worker.setParameters({ tessedit_pageseg_mode: '11' });
+      return recognize(target, null, '11', true);
+    }, { onSegment });
+  }
   if (prepared.inverted || prepared.colorEnhanced) {
     imageData.data.set(prepared.pixels);
     context.putImageData(imageData, 0, 0);
   }
-  const split = layout === 'columns' ? Math.floor(canvas.width / 2)
-    : layout === 'auto' ? detectColumnSplit(prepared.pixels, canvas.width, canvas.height) : null;
   if (split) {
     let enlarged;
     const columns = [];

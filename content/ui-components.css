@@ -1,0 +1,33 @@
+/* daisyUI adapters for modeless translation and the custom screenshot surface. */
+.hidden, [hidden] { display: none !important; }
+.popup, .selection-action, .tip { font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif; color: var(--color-base-content); }
+.popup { width: min(360px,calc(100vw - 24px)); min-width: min(240px,calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - 16px); overflow: auto; background: var(--color-base-100); border: 1px solid var(--color-base-300); border-radius: var(--radius-box); box-shadow: 0 8px 28px #0002; }
+.popup-header { border-color: var(--color-base-300); padding: 10px 12px; }
+.popup-langs, .popup-lang-arrow, .popup-original { color: var(--muted); }
+.popup-lang-badge { background: var(--color-base-200); color: var(--color-base-content); }
+.popup-translated { color: var(--color-base-content); }
+.popup-body { padding: 12px; gap: 10px; }
+.popup-divider { border-color: var(--color-base-300); }
+.popup-text-row { min-width: 0; }
+.popup-original, .popup-translated { overflow-wrap: anywhere; }
+.popup .btn { min-height: 30px; height: 30px; width: 30px; padding: 5px; font: inherit; box-shadow: none; color: var(--color-base-content); background: var(--color-base-200); border: 1px solid var(--color-base-300); border-radius: var(--radius-field); transition: background-color 120ms, color 120ms; }
+.popup .popup-close { border-color: transparent; background: transparent; }
+.popup .btn:hover { color: var(--color-base-content); background: var(--color-base-200); }
+.popup .btn.speaking { color: var(--color-primary-content); background: var(--color-primary); border-color: var(--color-primary); }
+.popup .btn.copied { color: var(--color-success); border-color: var(--color-success); background: color-mix(in srgb,var(--color-success) 12%,var(--color-base-100)); }
+.selection-trigger.btn { width: 32px; height: 32px; min-height: 32px; padding: 6px; border: 1px solid var(--color-base-300); background: var(--color-primary); color: var(--color-primary-content); box-shadow: 0 5px 18px #0002; }
+.selection-trigger.btn:hover, .selection-action:focus-within .selection-trigger { color: var(--color-primary-content); background: var(--color-primary); }
+.selection-menu { background: var(--color-base-100); border-color: var(--color-base-300); box-shadow: 0 5px 18px #0002; }
+.selection-menu .btn { min-height: 32px; height: 32px; font-size: 12px; color: var(--color-base-content); background: transparent; box-shadow: none; }
+.selection-menu .btn:hover { background: var(--color-base-200); }
+.selection-toast.alert { display: block; background: var(--color-base-100); color: var(--color-base-content); border: 1px solid var(--color-base-300); box-shadow: 0 5px 18px #0002; max-width: min(320px,calc(100vw - 24px)); overflow-wrap: anywhere; }
+.selection-toast.success { color: var(--color-success); }
+.selection-toast.error { color: var(--color-error); }
+.tip.card { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; padding: 12px 14px; background: var(--color-base-100); color: var(--color-base-content); border: 1px solid var(--color-base-300); border-radius: var(--radius-box); box-shadow: 0 6px 22px #0003; font-size: 13px; animation: pagekit-tip-in 120ms ease-out; }
+.tip .btn { flex: 0 0 auto; min-height: 32px; height: auto; margin: 0; padding: 7px 12px; font: inherit; color: var(--color-base-content); border-color: var(--color-base-300); background: var(--color-base-200); border-radius: var(--radius-field); transition: background-color 120ms; }
+.tip .btn:hover { background: var(--color-base-300); }
+.box { border-color: var(--color-primary); }
+.popup .btn:focus-visible, .selection-action .btn:focus-visible, .tip .btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@keyframes pagekit-tip-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 480px) { .tip.card { width: calc(100vw - 24px); max-width: none; top: 12px; gap: 8px; padding: 10px; font-size: 12px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

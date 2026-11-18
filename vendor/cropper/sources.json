@@ -1,0 +1,10 @@
+{
+  "name": "cropperjs",
+  "version": "2.3.1",
+  "url": "https://registry.npmjs.org/cropperjs/-/cropperjs-2.3.1.tgz",
+  "integrity": "sha512-bgy+iHRFjsBxBCriXkTuFuHRJGSGZISuqDGhDQG7gLK0F7qOzhH06bdXzGf4b0bZSQ+mApakybiW9xvKnS9dbg==",
+  "assets": {
+    "cropper.js": "d308e2093238531fe95307c1d7fcbdc8dd2a68503d93b972b876dbd74790075a",
+    "LICENSE": "eb917650781dcf06a60b97cba9b05bf583931ec2d311d8a5548a8dca90a57e0f"
+  }
+}

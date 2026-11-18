@@ -2,7 +2,7 @@
 // Shadow DOM 隔離翻譯懸浮視窗，避免頁面 CSS 污染
 
 // 防止 executeScript 重複注入時初始化兩次；版本變更時允許重新初始化。
-var SELECTION_TRANSLATE_SCRIPT_VERSION = '1.2.10-easy-browser-tools';
+var SELECTION_TRANSLATE_SCRIPT_VERSION = '1.8.2-pagekit';
 if (window.__selectionTranslateLoaded === SELECTION_TRANSLATE_SCRIPT_VERSION) {
   // 已有 listener，不重複初始化
 } else {
@@ -31,6 +31,24 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
   let isSelectionActionBusy = false;
   let pendingTranslatePopup = null;
   let translationRequestId = 0;
+
+  function mountUiKit(root, ready = () => {}) {
+    const style = document.createElement('style');
+    root.appendChild(style);
+    chrome.runtime.sendMessage({ type: 'GET_UI_KIT' }).then(response => {
+      if (!response?.success || !root.host.isConnected) return;
+      style.textContent = response.css;
+      root.host.dataset.pagekitUiKit = 'daisyui';
+      ready();
+    }).catch(() => {});
+  }
+
+  function fitPopup(popup) {
+    if (!popup.isConnected) return;
+    const box = popup.getBoundingClientRect();
+    popup.style.left = `${Math.max(8, Math.min(box.left, innerWidth - box.width - 8))}px`;
+    popup.style.top = `${Math.max(8, Math.min(box.top, innerHeight - box.height - 8))}px`;
+  }
 
   // ── 語言顯示名稱 ──────────────────────────────────────────
   const LANG_NAMES = {
@@ -427,8 +445,8 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
       <div class="popup-text-row">
         <div class="${textClass}">${escapeHtml(text)}</div>
         <div class="popup-text-actions">
-          <button class="popup-icon-btn popup-btn-tts" type="button" title="${ttsTitle}" data-text="${escapeAttr(text)}" data-lang="${escapeAttr(lang)}">${speakerSvg()}</button>
-          <button class="popup-icon-btn popup-btn-copy" type="button" title="${copyTitle}" data-text="${escapeAttr(text)}">${copySvg()}</button>
+          <button class="popup-icon-btn popup-btn-tts btn btn-ghost btn-sm" type="button" title="${ttsTitle}" aria-label="${ttsTitle}" data-text="${escapeAttr(text)}" data-lang="${escapeAttr(lang)}">${speakerSvg()}</button>
+          <button class="popup-icon-btn popup-btn-copy btn btn-ghost btn-sm" type="button" title="${copyTitle}" aria-label="${copyTitle}" data-text="${escapeAttr(text)}">${copySvg()}</button>
         </div>
       </div>
     `;
@@ -617,7 +635,9 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
 
     // 建立 popup 元素
     const popup = document.createElement('div');
-    popup.className = 'popup';
+    popup.className = 'popup card card-border';
+    popup.setAttribute('role', 'dialog');
+    popup.setAttribute('aria-label', '選取文字翻譯');
     popup.style.cssText = `top:${pos.top}px;left:${pos.left}px;`;
 
     const fromName = getLangName(data.from);
@@ -628,17 +648,17 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
     popup.innerHTML = `
       <div class="popup-header">
         <div class="popup-langs">
-          <span class="popup-lang-badge">${escapeHtml(fromName)}</span>
+          <span class="popup-lang-badge badge">${escapeHtml(fromName)}</span>
           <span class="popup-lang-arrow">→</span>
-          <span class="popup-lang-badge">${escapeHtml(toName)}</span>
+          <span class="popup-lang-badge badge">${escapeHtml(toName)}</span>
         </div>
-        <button class="popup-close" title="關閉 (Esc)">
+        <button class="popup-close btn btn-ghost btn-sm" type="button" title="關閉 (Esc)" aria-label="關閉翻譯">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
-      <div class="popup-body">
+      <div class="popup-body card-body">
         ${buildTextRow({
           text: data.original,
           lang: originalLang,
@@ -664,6 +684,8 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
     popup.querySelectorAll('.popup-btn-copy').forEach(btn => btn.addEventListener('click', handleCopyClick));
 
     shadowRoot.appendChild(popup);
+    fitPopup(popup);
+    mountUiKit(shadowRoot, () => fitPopup(popup));
     pendingTranslatePopup = null;
   }
 
@@ -695,7 +717,7 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
     const toast = actionShadowRoot.querySelector('.selection-toast');
     if (!toast) return;
     toast.textContent = message;
-    toast.className = `selection-toast ${type}`;
+    toast.className = `selection-toast alert ${type}`;
   }
 
   async function handleSelectionTranslate(e, requestedText) {
@@ -761,16 +783,16 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
     action.className = 'selection-action';
     action.style.cssText = `top:${pos.top}px;left:${pos.left}px;`;
     action.innerHTML = `
-      <button class="selection-trigger" title="Easy Browser Tools">
+      <button class="selection-trigger btn btn-primary btn-circle" type="button" title="頁匣 PageKit" aria-label="開啟文字工具" aria-expanded="false" aria-controls="pagekit-selection-menu">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
         </svg>
       </button>
-      <div class="selection-menu" role="menu">
-        <button type="button" data-action="translate">翻譯</button>
+      <div class="selection-menu join" id="pagekit-selection-menu" role="group" aria-label="文字工具">
+        <button class="btn btn-ghost btn-sm join-item" type="button" data-action="translate">翻譯</button>
       </div>
-      <div class="selection-toast hidden"></div>
+      <div class="selection-toast alert hidden" role="status" aria-live="polite"></div>
     `;
 
     action.addEventListener('mousedown', e => {
@@ -779,14 +801,22 @@ window.__selectionTranslateLoaded = SELECTION_TRANSLATE_SCRIPT_VERSION;
     });
     action.addEventListener('click', e => e.stopPropagation());
     action.querySelector('.selection-trigger').addEventListener('click', () => {
+      action.querySelector('.selection-trigger').focus({ preventScroll: true });
       action.classList.toggle('menu-open');
+      action.querySelector('.selection-trigger').setAttribute('aria-expanded', String(action.classList.contains('menu-open')));
+    });
+    action.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown') { event.preventDefault(); action.classList.add('menu-open'); action.querySelector('.selection-trigger').setAttribute('aria-expanded', 'true'); action.querySelector('[data-action="translate"]').focus(); }
+      if (event.key === 'Escape') { action.classList.remove('menu-open'); action.querySelector('.selection-trigger').setAttribute('aria-expanded', 'false'); action.querySelector('.selection-trigger').focus(); }
     });
     action.querySelector('[data-action="translate"]').addEventListener('click', handleSelectionTranslate);
 
     actionShadowRoot.appendChild(action);
+    mountUiKit(actionShadowRoot);
   }
 
   function scheduleSelectionAction() {
+    if (actionHost && document.activeElement === actionHost) return;
     if (pendingTranslatePopup) return;
     if (isSelectionActionBusy) return;
     if (isPointerSelecting) return;

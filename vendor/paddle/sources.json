@@ -1,0 +1,33 @@
+{
+  "versions": {
+    "@paddleocr/paddleocr-js": "0.4.2",
+    "@techstark/opencv-js": "4.10.0-release.1",
+    "onnxruntime-web": "1.31.1",
+    "clipper-lib": "6.4.2",
+    "js-yaml": "4.3.2",
+    "esbuild": "0.25.12"
+  },
+  "upstream": "https://github.com/PaddlePaddle/PaddleOCR/tree/main/paddleocr-js",
+  "originalCvHash": "19b46167b59efbef9cc3836264b0b657110833e4b1df84282004b8b3141c048d",
+  "originalSdkHash": "8610d82fdc539e48fa0147763be4b676c699d646a8db75fbceb627d9d37deb94",
+  "patchedCvHash": "bb9a4807714ba0efc896486e82d96e8e694cd4633814310ddb41ce59cfdb3c88",
+  "patches": [
+    "OpenCV static Embind wrappers (four generators)",
+    "SDK OffscreenCanvas and matFromImageData for dedicated worker",
+    "No CDN runtime fallback; WASM-only ONNX Runtime"
+  ],
+  "assets": {
+    "licenses/Apache-2.0.txt": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "licenses/clipper-attribution.txt": "d1326a49e9b54eb36cacde5c57c018a6f06bd785496bc4ddb8bf2d7965142d8a",
+    "licenses/clipper-Boost.txt": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+    "licenses/js-yaml.txt": "a07bc24468b9654ce76a547d47a2db282d07733b715db4c73a98bd63961f9550",
+    "licenses/jsbn.txt": "e0e396530fd1624126e9a7e0df94811e4062e03baeccb07bc33c934b0fd93a85",
+    "licenses/onnxruntime-MIT.txt": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+    "licenses/onnxruntime-ThirdPartyNotices.txt": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3",
+    "licenses/paddleocr-Apache-2.0.txt": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
+    "licenses/techstark-opencv-js.txt": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "ort/ort-wasm-simd-threaded.mjs": "30ed0b5cd1182ede931fea448afb567d4dc705ec957af09f108a2be5f770dac3",
+    "ort/ort-wasm-simd-threaded.wasm": "4b884c203b0fa48d057be3332c65513ff85aa3c5bddd6946acc0fab7ecda001d",
+    "paddle.js": "ca61537c4fcf331a51febbdf2697374e6573ee73ca9b6f6034338c45ee17c568"
+  }
+}

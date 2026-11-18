@@ -27,10 +27,10 @@ export function agreedCjkText(results, original) {
   return values[0] + (original.text.match(/[:：,;!?]+$/u)?.[0] || '');
 }
 
-export async function recognizeWithCjkRecovery(worker, canvas, rectangle, { language, mode, recoverCjk = true, budget }) {
+export async function recognizeWithCjkRecovery(worker, canvas, rectangle, { language, mode, recoverCjk = true, budget, withBlocks = false }) {
   const chinese = language?.split('+').find(code => ['chi_tra', 'chi_sim'].includes(code));
   const enabled = recoverCjk && chinese && budget.remaining > 0;
-  const result = await worker.recognize(canvas, rectangle || {}, enabled ? { text: true, blocks: true } : { text: true });
+  const result = await worker.recognize(canvas, rectangle || {}, enabled || withBlocks ? { text: true, blocks: true } : { text: true });
   if (!enabled) return result;
   const candidates = recoveryCandidates(result.data, canvas.width, canvas.height).slice(0, budget.remaining);
   if (!candidates.length) return result;
@@ -60,7 +60,7 @@ export async function recognizeWithCjkRecovery(worker, canvas, rectangle, { lang
         } finally { crop.width = crop.height = 0; }
       }
       const text = agreedCjkText(variants, word);
-      if (text) repairs.push({ start: word.start, end: word.end, text });
+      if (text) repairs.push({ start: word.start, end: word.end, text, bbox: word.bbox, confidence: Math.min(...variants.map(variant => variant.confidence)) });
     }
   } finally {
     await worker.reinitialize(language, 1);
@@ -68,5 +68,5 @@ export async function recognizeWithCjkRecovery(worker, canvas, rectangle, { lang
   }
   let text = result.data.text;
   for (const repair of repairs.reverse()) text = text.slice(0, repair.start) + repair.text + text.slice(repair.end);
-  return { ...result, data: { ...result.data, text } };
+  return { ...result, data: { ...result.data, text }, recoveredWords: repairs.map(({ bbox, text, confidence }) => ({ bbox, text, confidence })) };
 }

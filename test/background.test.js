@@ -12,7 +12,7 @@ let selectionResult = true;
 let activeTab = { id: 3, windowId: 1, url: 'https://example.com/' };
 const event = name => ({ addListener: listener => { listeners[name] = listener; } });
 globalThis.chrome = {
-  runtime: { id: 'test-extension', getURL: path => `chrome-extension://test-extension/${path}`, onInstalled: event('installed'), onMessage: event('message') },
+  runtime: { id: 'test-extension', getURL: path => `chrome-extension://test-extension/${path}`, onInstalled: event('installed'), onMessage: event('message'), onConnect: event('connect') },
   contextMenus: {
     onClicked: event('context'),
     removeAll: done => { menus.length = 0; done(); },
@@ -42,7 +42,7 @@ afterEach(() => {
 
 test('安裝時註冊翻譯、截圖與圖片 OCR 選單', () => {
   listeners.installed();
-  assert.equal(menus.length, 4);
+  assert.equal(menus.length, 5);
   assert.equal(menus[0].id, 'instant-translate');
   assert.deepEqual(menus[0].contexts, ['selection']);
 });
@@ -51,6 +51,12 @@ test('右鍵入口保留點選的 frame，先注入再送出文字', async () =>
   await listeners.context({ menuItemId: 'instant-translate', frameId: 7, selectionText: ' Hello ' }, { id: 12 });
   assert.deepEqual(injections[0].target, { tabId: 12, frameIds: [7] });
   assert.deepEqual(messages[0], [12, { type: 'TRANSLATE_SELECTION', data: { text: 'Hello' } }, { frameId: 7 }]);
+});
+
+test('工具列圖示的匯入入口直接開啟編輯彈窗，不先截圖', async () => {
+  await listeners.context({ menuItemId: 'import-image' }, { incognito: true });
+  assert.deepEqual(created, [{ url: 'chrome-extension://test-extension/ocr/ocr.html', type: 'popup', width: 1200, height: 820, focused: true, incognito: true }]);
+  assert.equal(captures.length, 0);
 });
 
 test('工具列有選取文字時維持翻譯入口', async () => {
@@ -219,4 +225,14 @@ test('朗讀訊息回傳音訊且不需要原專案儲存或 provider', async ()
   assert.deepEqual(await send({ type: 'TTS_FETCH', data: { text: 'Hello', lang: 'en' } }), {
     success: true, base64: btoa('\x01\x02')
   });
+});
+
+test('UI 樣式回覆僅接受本擴充功能訊息，內容皆來自固定本機檔案', async () => {
+  assert.equal(listeners.message({type:'GET_UI_KIT'}, {id:'external'}, () => assert.fail('拒絕外部擴充功能')), false);
+  const urls = [];
+  mock.method(globalThis, 'fetch', async url => { urls.push(url); return new Response('/* UI CSS */'); });
+  const result = await send({type:'GET_UI_KIT',url:'https://untrusted.example/styles'});
+  assert.equal(result.success, true);
+  assert.equal(urls.length, 3);
+  assert.ok(urls.every(url => url.startsWith('chrome-extension://test-extension/')));
 });

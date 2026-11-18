@@ -1,0 +1,12 @@
+/* Shared by extension pages and isolated Shadow DOM tools. No remote assets. */
+:root, :host {
+  color-scheme: light dark;
+  --color-base-100: #fff; --color-base-200: #f1f4f6; --color-base-300: #d8dfe5; --color-base-content: #242b31;
+  --color-primary: #f3c441; --color-primary-content: #241e0b; --color-neutral: #283039; --color-neutral-content: #fff;
+  --color-success: #258052; --color-success-content: #fff; --color-error: #be3838; --color-error-content: #fff;
+  --radius-selector: .4rem; --radius-field: .5rem; --radius-box: .75rem; --size-selector: .25rem; --size-field: .25rem;
+  --border: 1px; --depth: 0; --noise: 0; --muted: #69757f; --canvas-bg: #eef2f5; --focus: #a47700;
+}
+@media (prefers-color-scheme: dark) {
+  :root, :host { --color-base-100: #1a222b; --color-base-200: #25313c; --color-base-300: #3a4753; --color-base-content: #e8edf1; --muted: #a3afb9; --canvas-bg: #141c24; --color-success: #85c79f; --color-error: #ffaaa4; --focus: #f3c441; }
+}

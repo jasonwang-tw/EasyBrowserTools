@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $iconRoot = Split-Path -Parent $PSScriptRoot
 $iconDirectory = Join-Path $iconRoot 'icons'
-[xml]$iconSvg = Get-Content -LiteralPath (Join-Path $iconDirectory 'easy-browser-tools-yellow.svg') -Raw -Encoding UTF8
+[xml]$iconSvg = Get-Content -LiteralPath (Join-Path $iconDirectory 'pagekit.svg') -Raw -Encoding UTF8
 $iconMaster = New-Object System.Drawing.Bitmap(1024, 1024, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
 $iconCanvas = [System.Drawing.Graphics]::FromImage($iconMaster)
 try {
@@ -65,7 +65,7 @@ try {
             }
         } finally { $iconPath.Dispose() }
     }
-    $iconMaster.Save((Join-Path $iconDirectory 'easy-browser-tools-yellow-master.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+    $iconMaster.Save((Join-Path $iconDirectory 'pagekit-master.png'), [System.Drawing.Imaging.ImageFormat]::Png)
     foreach ($iconSize in @(16, 32, 48, 128)) {
         $iconBitmap = New-Object System.Drawing.Bitmap($iconSize, $iconSize, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
         $iconGraphics = [System.Drawing.Graphics]::FromImage($iconBitmap)
@@ -74,7 +74,7 @@ try {
             $iconGraphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
             $iconGraphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
             $iconGraphics.DrawImage($iconMaster, (New-Object System.Drawing.Rectangle(0, 0, $iconSize, $iconSize)))
-            $iconBitmap.Save((Join-Path $iconDirectory "easy-browser-tools-yellow-$iconSize.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $iconBitmap.Save((Join-Path $iconDirectory "pagekit-$iconSize.png"), [System.Drawing.Imaging.ImageFormat]::Png)
         } finally { $iconGraphics.Dispose(); $iconBitmap.Dispose() }
     }
 } finally { $iconCanvas.Dispose(); $iconMaster.Dispose() }

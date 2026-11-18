@@ -1,0 +1,31 @@
+{
+  "name": "daisyui",
+  "version": "5.8.1",
+  "url": "https://registry.npmjs.org/daisyui/-/daisyui-5.8.1.tgz",
+  "integrity": "sha512-ptP4WHOJ6WltNnA5zwkg3GypOLhsyUM2FHuXCckWVEpWviioInFKsjnShCWYGYHsQ5P9bUCOH1tn45cKLeTUpg==",
+  "parts": [
+    "base/properties.css",
+    "base/reset.css",
+    "base/rootcolor.css",
+    "components/button.css",
+    "components/select.css",
+    "components/input.css",
+    "components/textarea.css",
+    "components/checkbox.css",
+    "components/badge.css",
+    "components/progress.css",
+    "components/collapse.css",
+    "components/kbd.css",
+    "components/loading.css",
+    "components/card.css",
+    "components/alert.css",
+    "components/modal.css",
+    "components/range.css",
+    "components/dropdown.css",
+    "utilities/join.css"
+  ],
+  "assets": {
+    "daisyui.css": "af914b09fa52948634ab738c9e7f59704495d93b7346e02967d0e91cff850b22",
+    "LICENSE": "8709e3ac65c84637c422dc8082b893d9997fce093751c77b2f1983bf29dbf9ea"
+  }
+}

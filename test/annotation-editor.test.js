@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AnnotationEditor } from '../ocr/annotation-editor.js';
+import { AnnotationEditor, drawAnnotation } from '../ocr/annotation-editor.js';
+import { snappedLineEnd } from '../ocr/line-geometry.js';
 
 function setup() {
   const context = new Proxy({ measureText: text => ({ width: text.length * 12 }) }, { get: (object, key) => object[key] ?? (() => {}) });
@@ -13,6 +14,42 @@ function setup() {
   const pointer = (x, y) => ({ clientX: x, clientY: y, pointerId: 1, button: 0, preventDefault() {} });
   return { editor, pointer };
 }
+
+test('直線吸附八個方向，水平180度、垂直90度與45度反向皆正確', () => {
+  const start = {x:100,y:100};
+  for (const [dx,dy,ex,ey] of [[80,10,80,0],[80,70,75,75],[10,80,0,80],[-80,70,-75,75],[-80,10,-80,0],[-80,-70,-75,-75],[10,-80,0,-80],[80,-70,75,-75]]) {
+    assert.deepEqual(snappedLineEnd(start,{x:100+dx,y:100+dy},200,200),{x:100+ex,y:100+ey});
+  }
+});
+test('直線靠邊界沿原方向縮短，仍保留精確45度與合法座標', () => {
+  assert.deepEqual(snappedLineEnd({x:90,y:20},{x:100,y:35},100,100),{x:100,y:30});
+  assert.deepEqual(snappedLineEnd({x:4,y:98},{x:0,y:100},100,100),{x:2,y:100});
+  for (const start of [{x:1,y:1},{x:99,y:99},{x:50,y:50}]) for (const x of [0,20,100]) for (const y of [0,30,100]) {
+    const end=snappedLineEnd(start,{x,y},100,100),dx=Math.abs(end.x-start.x),dy=Math.abs(end.y-start.y);
+    assert.ok(end.x>=0&&end.x<=100&&end.y>=0&&end.y<=100);
+    assert.ok(dx===0||dy===0||Math.abs(dx-dy)<1e-9);
+  }
+});
+test('直線預覽與放開使用相同原圖座標，保留色寬且可復原重做', () => {
+  const {editor,pointer}=setup(), source=editor.source;
+  editor.tool='line';editor.width=12;editor.color='#123456';
+  editor.begin(pointer(200,150));editor.move(pointer(450,170));
+  assert.deepEqual(editor.draft.start,{x:200,y:200});assert.deepEqual(editor.draft.end,{x:700,y:200});
+  editor.end(pointer(450,170));const line=editor.items[0];
+  assert.equal(line.tool,'line');assert.equal(line.width,24);assert.equal(line.color,'#123456');
+  assert.deepEqual(line.end,{x:700,y:200});assert.equal(editor.source,source);
+  editor.undo();assert.equal(editor.items.length,0);editor.redo();assert.equal(editor.items[0],line);
+});
+test('直線取消及原地點擊不新增筆畫或破壞復原歷史', () => {
+  const {editor,pointer}=setup();editor.tool='line';
+  editor.begin(pointer(200,150));editor.end(pointer(200,150));assert.equal(editor.items.length,0);assert.equal(editor.undoStack.length,0);
+  editor.begin(pointer(200,150));editor.move(pointer(300,200));editor.cancel();assert.equal(editor.draft,null);assert.equal(editor.items.length,0);
+});
+test('直線匯出只畫單一線段，沒有箭頭或額外筆畫', () => {
+  const calls=[];const context=new Proxy({}, {get:(_,key)=>(...args)=>calls.push([key,...args])});
+  drawAnnotation(context,{tool:'line',start:{x:10,y:20},end:{x:80,y:20},width:4,color:'#ff0000'});
+  assert.deepEqual(calls.filter(x=>['moveTo','lineTo','stroke'].includes(x[0])),[['moveTo',10,20],['lineTo',80,20],['stroke']]);
+});
 
 test('編號依點選順序新增，縮放後座標仍對應圖片位置', () => {
   const { editor, pointer } = setup();

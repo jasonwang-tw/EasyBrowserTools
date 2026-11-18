@@ -1,6 +1,6 @@
 // Frozen viewport selector, isolated from website styles and scripts.
 (() => {
-  const version = '1.2.0';
+  const version = '1.8.2';
   if (window.__easyCaptureVersion === version) return;
   window.__easyCaptureCleanup?.();
   window.__easyCaptureVersion = version;
@@ -21,7 +21,14 @@
       .tip{position:absolute;top:20px;left:50%;transform:translateX(-50%);max-width:90%;padding:12px 16px;background:#14213df2;border:1px solid #94a3b8;border-radius:10px;text-align:center;cursor:default}
       button{margin-left:16px;font:inherit;color:inherit;background:transparent;border:1px solid #94a3b8;border-radius:5px;padding:4px 10px;cursor:pointer}
       [hidden]{display:none!important}
-    </style><div class="screen" role="dialog" aria-modal="true" aria-label="框選截圖範圍" tabindex="-1"><img alt="目前畫面的截圖"><div class="shade"></div><div class="box" hidden></div><div class="tip"><span>拖曳框選範圍，放開後開啟編輯彈窗 · Esc 取消</span><button type="button">取消</button></div></div>`;
+    </style><div class="screen" role="dialog" aria-modal="true" aria-label="框選截圖範圍" tabindex="-1"><img alt="目前畫面的截圖"><div class="shade"></div><div class="box" hidden></div><div class="tip card card-border"><span>拖曳框選範圍，放開後開啟編輯彈窗 · Esc 取消</span><button class="btn btn-outline btn-sm" type="button">取消</button></div></div>`;
+    const uiStyle = document.createElement('style');
+    root.appendChild(uiStyle);
+    chrome.runtime.sendMessage({ type: 'GET_UI_KIT' }).then(response => {
+      if (!response?.success || !root.host.isConnected) return;
+      uiStyle.textContent = response.css;
+      root.host.dataset.pagekitUiKit = 'daisyui';
+    }).catch(() => {});
     const screen = root.querySelector('.screen');
     const box = root.querySelector('.box');
     const tip = root.querySelector('.tip span');
