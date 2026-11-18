@@ -1,6 +1,6 @@
 # 專案規範
 
-- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 沿用 `jasonwang-tw/EasyBrowserTools`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.8.2。
+- 本專案名稱為「頁匣 PageKit」，套件名稱 `pagekit`；repository 為 `jasonwang-tw/PageKit`，本地安裝目錄沿用 `EasyBrowserTools`。獨立於 Open Chat Hub 維護；預設開發分支為 `main`，目前版本 1.8.2。
 - 顯示名稱與新資源使用 PageKit。舊分頁使用的 `__easy*` 狀態與圖片座標通道屬相容識別，更名時保留以避免重複監聽或跨框架中斷。
 - 修改前先讀 README.md 與本檔。Git commit 訊息使用繁體中文。
 - 提交、推送、建立遠端分支及發布只能使用 GitHub App connector；不可使用 git add／commit／push 或 gh 作為替代。

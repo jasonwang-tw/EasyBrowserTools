@@ -4,7 +4,7 @@ Chrome / Edge 瀏覽器效率工具箱，整合即時翻譯、截圖標註、圖
 
 原名 Easy Browser Tools，自 1.2.12 更名為「頁匣 PageKit」。
 
-Repository：[jasonwang-tw/EasyBrowserTools](https://github.com/jasonwang-tw/EasyBrowserTools)，預設開發分支為 `main`。
+Repository：[jasonwang-tw/PageKit](https://github.com/jasonwang-tw/PageKit)，預設開發分支為 `main`。
 
 ## 版本
 
@@ -68,7 +68,7 @@ Repository：[jasonwang-tw/EasyBrowserTools](https://github.com/jasonwang-tw/Eas
 
 更新至 1.8.2 後，請在擴充功能管理頁找到「頁匣 PageKit」（舊名 Easy Browser Tools）並重新載入。關閉舊版編輯彈窗後重新截圖；新彈窗標示「頁匣 PageKit v1.8.2」。已下載的加強模型可沿用，不需重下載。建議重新整理網頁，使各層 iframe 載入新的圖片定位程式；舊分頁會嘗試即時重新注入與定位，不會自動改成手動框選。
 
-本地目錄沿用 `EasyBrowserTools`，GitHub repository 網址也沿用原址；更名時保留既有安裝位置，避免未封裝擴充功能因搬動資料夾而失效或改變識別。可與原 Open Chat Hub 及其拆分 worktree 並存。為避免顯示兩組選取工具列，測試時請停用原 Open Chat Hub。此擴充功能不會讀取或遷移原專案的資料。
+本地目錄沿用 `EasyBrowserTools`，GitHub repository 已更名為 `jasonwang-tw/PageKit`；更名時保留既有安裝位置，避免未封裝擴充功能因搬動資料夾而失效或改變識別。可與原 Open Chat Hub 及其拆分 worktree 並存。為避免顯示兩組選取工具列，測試時請停用原 Open Chat Hub。此擴充功能不會讀取或遷移原專案的資料。
 
 完整介面盤點與設計設定見 [docs/UI_INVENTORY.md](docs/UI_INVENTORY.md)，包含文字輸入浮窗、選字工具、翻譯浮窗、截圖遮罩與瀏覽器原生介面的區分。
 
