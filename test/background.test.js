@@ -42,7 +42,7 @@ afterEach(() => {
 
 test('安裝時註冊翻譯、截圖與圖片 OCR 選單', () => {
   listeners.installed();
-  assert.equal(menus.length, 5);
+  assert.equal(menus.length, 6);
   assert.equal(menus[0].id, 'instant-translate');
   assert.deepEqual(menus[0].contexts, ['selection']);
 });
@@ -57,6 +57,19 @@ test('工具列圖示的匯入入口直接開啟編輯彈窗，不先截圖', as
   await listeners.context({ menuItemId: 'import-image' }, { incognito: true });
   assert.deepEqual(created, [{ url: 'chrome-extension://test-extension/ocr/ocr.html', type: 'popup', width: 1200, height: 820, focused: true, incognito: true }]);
   assert.equal(captures.length, 0);
+});
+
+test('贊助入口只開固定支持頁，不讀取或清除目前圖片工作', async () => {
+  session = { 'ocr:working': { dataUrl: 'data:image/png;base64,AAAA', createdAt: 123 } };
+  const snapshot = structuredClone(session);
+  const tabs = [];
+  mock.method(chrome.tabs, 'create', async data => { tabs.push(data); });
+  await listeners.context({ menuItemId: 'support-pagekit' }, activeTab);
+  assert.deepEqual(tabs, [{ url: 'https://buymeacoffee.com/jasonwang0052' }]);
+  assert.deepEqual(session, snapshot);
+  assert.equal(captures.length, 0);
+  assert.equal(injections.length, 0);
+  assert.equal(messages.length, 0);
 });
 
 test('工具列有選取文字時維持翻譯入口', async () => {
