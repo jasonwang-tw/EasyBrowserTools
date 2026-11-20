@@ -8,7 +8,7 @@ Repository：[jasonwang-tw/PageKit](https://github.com/jasonwang-tw/PageKit)，�
 
 ## 版本
 
-**目前版本：1.8.2**（2026-11-18）。
+**目前版本：1.8.3**（2026-11-20）。
 
 由 Open Chat Hub 1.41.0 的選取翻譯功能拆出；匯入來源為 [`selection-translate` 的拆分提交 `2f0ceddc`](https://github.com/jasonwang-tw/minimax-chat-extension/commit/2f0ceddc1befb7f0f09984a8a4b43ae745b0eced)。本 repository 從獨立版本 1.0.0 開始，來源歷史保留於原 repository。
 
@@ -66,7 +66,7 @@ Repository：[jasonwang-tw/PageKit](https://github.com/jasonwang-tw/PageKit)，�
 3. 選擇含本 README 與 manifest.json 的資料夾。
 4. 開啟或重新整理一般 HTTP/HTTPS 網頁，選取文字後翻譯，或使用右鍵／工具列圖示啟動 OCR。不需 npm 安裝、編譯或 API Key。
 
-更新至 1.8.2 後，請在擴充功能管理頁找到「頁匣 PageKit」（舊名 Easy Browser Tools）並重新載入。關閉舊版編輯彈窗後重新截圖；新彈窗標示「頁匣 PageKit v1.8.2」。已下載的加強模型可沿用，不需重下載。建議重新整理網頁，使各層 iframe 載入新的圖片定位程式；舊分頁會嘗試即時重新注入與定位，不會自動改成手動框選。
+更新至 1.8.3 後，請在擴充功能管理頁找到「頁匣 PageKit」（舊名 Easy Browser Tools）並重新載入。關閉舊版編輯彈窗後重新截圖；新彈窗標示「頁匣 PageKit v1.8.3」。已下載的加強模型可沿用，不需重下載。建議重新整理網頁，使各層 iframe 載入新的圖片定位程式；舊分頁會嘗試即時重新注入與定位，不會自動改成手動框選。
 
 本地目錄沿用 `EasyBrowserTools`，GitHub repository 已更名為 `jasonwang-tw/PageKit`；更名時保留既有安裝位置，避免未封裝擴充功能因搬動資料夾而失效或改變識別。可與原 Open Chat Hub 及其拆分 worktree 並存。為避免顯示兩組選取工具列，測試時請停用原 Open Chat Hub。此擴充功能不會讀取或遷移原專案的資料。
 
@@ -129,6 +129,11 @@ chrome://、瀏覽器商店、瀏覽器 PDF 檢視器等受保護頁面不支援
 - 商店素材及發布準備。
 
 ## Changelog
+
+### [1.8.3] - 2026-11-20
+
+- 編輯器頁尾與擴充功能圖示右鍵加入「請我喝杯咖啡」入口，標示目前 US$3／杯；點擊另開 Jason’s Base 的 Buy Me a Coffee 公開支持頁。
+- 贊助完全自願，付款由外部平台確認；不影響既有免費功能、不新增權限、不載入遠端 widget，也不傳送圖片或辨識文字。
 
 ### [1.8.2] - 2026-11-18
 

@@ -1,5 +1,17 @@
 # 頁匣 PageKit UI 設定與盤點
 
+## 1.8.3 贊助入口（2026-11-20；使用者已確認）
+
+- 使用者已選 A：編輯器頁尾與擴充功能圖示的右鍵選單各一個入口，文字「請我喝杯咖啡」；保留既有暖黃、字體、daisyUI 與 Lucide 圖示方向。初稿後最多 2 輪修改。
+- 使用者已明確同意本次更新重新送審，且通過審查後自動發布。實作與必要驗證完成、上架 ZIP 核對後再取消現有審查及上傳新版；保留既有介紹影片網址。
+- 公開目的地為 https://buymeacoffee.com/jasonwang0052 ，名稱 Jason’s Base；不可將創作者 dashboard 當成訪客支持連結。2026-11-20 訪客頁實際顯示一杯預設 US$3、按鈕「Support with 3 United States Dollar」，每月支持未勾選。
+- 使用者追問減少付款步驟，並指示可設 US$1 就改為 US$1、否則保留 US$3 繼續實作。已實際登入 Supporters → Settings → Price per coffee，編輯選項只有 US$3／US$5／US$10；因此依備案保留 US$3，取消編輯後讀回 $3。入口旁顯示「US$3／杯」；付款仍由訪客在官方支持頁確認，不自行編造金額參數、不聲稱點一次入口即扣款，不變更每月贊助、收款或其他帳戶設定。
+- 編輯器使用本機 daisyUI ghost 小按鈕與 Lucide coffee 線條 SVG，頁尾文字與金額常駐可讀；圖示右鍵文字為「請我喝杯咖啡（US$3／杯）」。兩者只在明確點擊後另開官方頁面，沒有自動連線、遠端 widget、付款資料收集、圖片上傳或新增權限。新分頁保留目前圖片與標註。
+- 送審結果：1.8.3 套件已上傳，重新提交成功且目前待審查；已依使用者明確同意啟用通過後自動發布。原始 ZIP 與驗證見 output/support-release/submission.json；修改輪次使用 0／2（內部驗收不占輪次）。
+- 互動沿用現有短 hover／focus 回饋與 prefers-reduced-motion；鍵盤可辨識新分頁行為，支援 Enter 與焦點外框。320px 不橫向溢出，長狀態訊息可換行，不壓住辨識進度。金額為 2026-11-20 現行預設，日後改價須同步入口文字。
+- 對標與驗收：沿用 daisyUI 官方 ghost button 的狀態／焦點，以及 Buy Me a Coffee 官方支持頁的價格與付款表述；核對公開目的地、主題對比、窄視窗與新分頁行為。Lucide coffee 來源 blob 52d4da353b4dd0dbe7c6ec8898d3fe7863bf0fca，授權保存於 icons/LUCIDE-LICENSE.txt 並納入套件。
+- 來源：[一次性支持與付款方式](https://help.buymeacoffee.com/en/articles/10182730-what-is-buy-me-a-coffee-and-how-does-it-work)、[咖啡價格設定](https://help.buymeacoffee.com/en/articles/8052257-how-to-change-your-coffee-price)、[daisyUI（MIT）](https://github.com/saadeghi/daisyui)、[Lucide（ISC）](https://github.com/lucide-icons/lucide)。沿用現有本機元件，不新增遠端腳本。
+
 1.8.2 貼上圖片：使用者要求在編輯彈窗以 Ctrl+V 取代目前截圖；空白編輯器也可貼上。使用 paste 事件中的第一張圖片，與檔案匯入共用格式／30 MB／像素驗證、狀態清理及自動 OCR。驗證完成才替換，成功清除舊標註、裁切、去背與辨識／譯文；不保留跨圖片復原。文字輸入框／contenteditable 與其他模態 dialog 不攔截；純文字或只有 HTML 圖片網址不匯入、不下載遠端圖片。處理中提示稍後再貼，不排隊覆蓋。沿用現有 daisyUI，只增補操作說明；不新增 clipboardRead、不背景輪詢剪貼簿。
 
 1.8.1 刪除警示色：使用者明確要求刪除按鈕改紅色。沿用 daisyUI `btn-error`，模型刪除保留 outline、標註刪除保留 ghost；文字與模型按鈕邊框採既定主題 error 紅色，hover／按下以紅色淡底回饋。停用狀態維持既有透明度及不可操作規則，不改其他按鈕、模型刪除或標註操作邏輯。[官方按鈕樣式](https://daisyui.com/components/button/)。

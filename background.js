@@ -19,6 +19,7 @@ chrome.runtime.onInstalled.addListener(() => {
     ]) chrome.contextMenus.create({ ...menu, documentUrlPatterns: ['http://*/*', 'https://*/*'] });
     chrome.contextMenus.create({ id: 'screenshot-shortcut', title: '設定截圖快捷鍵', contexts: ['action'] });
     chrome.contextMenus.create({ id: 'import-image', title: '匯入圖片／本機去背', contexts: ['action'] });
+    chrome.contextMenus.create({ id: 'support-pagekit', title: '請我喝杯咖啡（US$3／杯）', contexts: ['action'] });
   });
 });
 
@@ -113,6 +114,7 @@ function openShortcutSettings() {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'support-pagekit') return chrome.tabs.create({ url: 'https://buymeacoffee.com/jasonwang0052' });
   if (info.menuItemId === 'import-image') return editorWindow('ocr/ocr.html', Boolean(tab?.incognito));
   if (info.menuItemId === 'screenshot-shortcut') return openShortcutSettings();
   if (tab?.id != null && ['screenshot-ocr', 'image-ocr'].includes(info.menuItemId)) return requestScreenshot(tab, info.menuItemId === 'image-ocr' ? { frameId: info.frameId ?? 0, srcUrl: info.srcUrl } : undefined);
